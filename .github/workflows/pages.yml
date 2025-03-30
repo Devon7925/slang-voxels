@@ -35,7 +35,7 @@ jobs:
       - name: Build
         run: cargo build --target wasm32-unknown-unknown
       - name: Bindgen
-        run: wasm-bindgen --out-dir target/generated/ --web target/wasm32-unknown-unknown/debug/slang-native-playground-example.wasm 
+        run: wasm-bindgen --out-dir target/generated/ --web target/wasm32-unknown-unknown/debug/slang-voxels.wasm 
       - name: Move files
         run: |
           mkdir _site

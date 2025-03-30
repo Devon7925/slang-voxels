@@ -3152,17 +3152,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "slang-native-playground-example"
-version = "0.1.0"
-dependencies = [
- "ron",
- "slang-compiler-type-definitions",
- "slang-native-playground",
- "slang-shader-macros",
- "wgpu",
-]
-
-[[package]]
 name = "slang-shader-macros"
 version = "0.1.0"
 source = "git+https://github.com/Devon7925/slang-native-playground#8ee66266420535ef66edd3a03b79980e7da3963d"
@@ -3193,6 +3182,17 @@ source = "git+https://github.com/Devon7925/slang-rs#f799efcda1e3dde05d19df5c95ba
 dependencies = [
  "bindgen",
  "paste",
+]
+
+[[package]]
+name = "slang-voxels"
+version = "0.1.0"
+dependencies = [
+ "ron",
+ "slang-compiler-type-definitions",
+ "slang-native-playground",
+ "slang-shader-macros",
+ "wgpu",
 ]
 
 [[package]]
