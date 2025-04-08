@@ -3099,7 +3099,7 @@ dependencies = [
 [[package]]
 name = "slang"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-rs#f799efcda1e3dde05d19df5c95ba5e56ce5df73a"
+source = "git+https://github.com/Devon7925/slang-rs#c5c157a97eed401318e67fc830be31f25e570205"
 dependencies = [
  "libc",
  "paste",
@@ -3108,23 +3108,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "slang-compiler-type-definitions"
-version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#8ee66266420535ef66edd3a03b79980e7da3963d"
-dependencies = [
- "bytemuck",
- "egui",
- "serde",
- "typetag",
- "web-time",
- "wgpu",
- "winit",
-]
-
-[[package]]
 name = "slang-native-playground"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#8ee66266420535ef66edd3a03b79980e7da3963d"
+source = "git+https://github.com/Devon7925/slang-native-playground#b95ca1bb7ddf6059d77ca7830e932ab6cc4a22ef"
 dependencies = [
  "bytemuck",
  "console_error_panic_hook",
@@ -3141,7 +3127,7 @@ dependencies = [
  "regex",
  "ron",
  "serde",
- "slang-compiler-type-definitions",
+ "slang-playground-compiler",
  "slang-shader-macros",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -3152,33 +3138,58 @@ dependencies = [
 ]
 
 [[package]]
-name = "slang-shader-macros"
+name = "slang-playground-compiler"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#8ee66266420535ef66edd3a03b79980e7da3963d"
+source = "git+https://github.com/Devon7925/slang-native-playground#b95ca1bb7ddf6059d77ca7830e932ab6cc4a22ef"
 dependencies = [
- "base64",
+ "bytemuck",
+ "egui",
  "image",
- "proc-macro2",
- "quote",
  "regex",
  "reqwest",
+ "serde",
+ "slang-reflector",
+ "strum 0.27.1",
+ "strum_macros 0.27.1",
+ "tobj",
+ "typetag",
+ "url",
+ "web-time",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
+name = "slang-reflector"
+version = "0.1.0"
+source = "git+https://github.com/Devon7925/slang-reflector.git#0167c3559c84428be11c7d3a2ff9b13b2e3ab28d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "slang",
+ "syn",
+]
+
+[[package]]
+name = "slang-shader-macros"
+version = "0.1.0"
+source = "git+https://github.com/Devon7925/slang-native-playground#b95ca1bb7ddf6059d77ca7830e932ab6cc4a22ef"
+dependencies = [
+ "base64",
+ "proc-macro2",
+ "quote",
  "ron",
  "serde",
  "serde_json",
- "slang",
- "slang-compiler-type-definitions",
- "strum 0.27.1",
- "strum_macros 0.27.1",
+ "slang-playground-compiler",
  "syn",
- "tobj",
- "url",
  "wgpu",
 ]
 
 [[package]]
 name = "slang-sys"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-rs#f799efcda1e3dde05d19df5c95ba5e56ce5df73a"
+source = "git+https://github.com/Devon7925/slang-rs#c5c157a97eed401318e67fc830be31f25e570205"
 dependencies = [
  "bindgen",
  "paste",
@@ -3189,8 +3200,8 @@ name = "slang-voxels"
 version = "0.1.0"
 dependencies = [
  "ron",
- "slang-compiler-type-definitions",
  "slang-native-playground",
+ "slang-playground-compiler",
  "slang-shader-macros",
  "wgpu",
 ]
