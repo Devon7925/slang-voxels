@@ -33,9 +33,9 @@ jobs:
           extract: true
       - name: Update lunarg slang
         run: |
-          cp slang/lib/* $VULKAN_SDK/Lib
-          cp slang/bin/* $VULKAN_SDK/Bin
-          cp slang/include/* $VULKAN_SDK/Include
+          cp slang/lib/* $VULKAN_SDK/lib
+          cp slang/bin/* $VULKAN_SDK/bin
+          cp slang/include/* $VULKAN_SDK/include
           cp slang/share/* $VULKAN_SDK/share
       - name: Setup toolchain for wasm
         run: |
