@@ -37,6 +37,7 @@ jobs:
           cp -rv slang/bin/* $VULKAN_SDK/bin
           cp -rv slang/include/* $VULKAN_SDK/include/slang
           cp -rv slang/share/* $VULKAN_SDK/share
+          cp -rv slang/cmake/* $VULKAN_SDK/lib/cmake
       - name: Setup toolchain for wasm
         run: |
           rustup update stable
@@ -44,10 +45,10 @@ jobs:
           rustup set profile minimal
           rustup target add wasm32-unknown-unknown
           cargo install wasm-bindgen-cli
-      - name: Rust Cache # cache the rust build artefacts
+      - name: Rust Cache # cache the rust build artifacts
         uses: Swatinem/rust-cache@v2
       - name: Build
-        run: cargo build --target wasm32-unknown-unknown
+        run: RUST_BACKTRACE=1 cargo build --target wasm32-unknown-unknown
       - name: Bindgen
         run: wasm-bindgen --out-dir target/generated/ --web target/wasm32-unknown-unknown/debug/slang-voxels.wasm 
       - name: Move files
