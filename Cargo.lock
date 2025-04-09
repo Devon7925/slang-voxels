@@ -1181,9 +1181,9 @@ dependencies = [
 
 [[package]]
 name = "half"
-version = "2.5.0"
+version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7db2ff139bba50379da6aa0766b52fdcb62cb5b263009b09ed58ba604e14bbd1"
+checksum = "459196ed295495a68f7d7fe1d84f6c4b7ff0e21fe3017b2f283c6fac3ad803c9"
 dependencies = [
  "cfg-if",
  "crunchy",
@@ -1836,9 +1836,9 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "miniz_oxide"
-version = "0.8.7"
+version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff70ce3e48ae43fa075863cef62e8b43b71a4f2382229920e0df362592919430"
+checksum = "3be647b768db090acb35d5ec5db2b0e1f1de11133ca123b9eacf5137868f892a"
 dependencies = [
  "adler2",
  "simd-adler32",
@@ -3112,7 +3112,7 @@ dependencies = [
 [[package]]
 name = "slang-native-playground"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#7367c3ea7bdb4fa55be752c8f229207dc7fa35df"
+source = "git+https://github.com/Devon7925/slang-native-playground#8cbc3140ca68e40b04d71701f65aec0c9025b44f"
 dependencies = [
  "bytemuck",
  "console_error_panic_hook",
@@ -3142,7 +3142,7 @@ dependencies = [
 [[package]]
 name = "slang-playground-compiler"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#7367c3ea7bdb4fa55be752c8f229207dc7fa35df"
+source = "git+https://github.com/Devon7925/slang-native-playground#8cbc3140ca68e40b04d71701f65aec0c9025b44f"
 dependencies = [
  "bytemuck",
  "egui",
@@ -3175,7 +3175,7 @@ dependencies = [
 [[package]]
 name = "slang-shader-macros"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#7367c3ea7bdb4fa55be752c8f229207dc7fa35df"
+source = "git+https://github.com/Devon7925/slang-native-playground#8cbc3140ca68e40b04d71701f65aec0c9025b44f"
 dependencies = [
  "base64",
  "proc-macro2",

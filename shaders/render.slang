@@ -544,7 +544,7 @@ float3 get_color(float3 pos, float3 ray, RaycastResult primary_ray, uint vertica
         float3 light = float3(0);
         if (reflection_check.voxel_data >> 24 == MAT_OOB)
         {
-            light += float3(pow(dot(reflection, -light_dir), 3.0));
+            light += float3(pow(max(dot(reflection, -light_dir), 0.0), 3.0));
         }
         else if (reflection_light_check.voxel_data >> 24 == MAT_OOB)
         {
@@ -556,7 +556,7 @@ float3 get_color(float3 pos, float3 ray, RaycastResult primary_ray, uint vertica
         SimpleRaycastResult ao_check = simple_raycast(primary_ray.layers[i].pos + epsilon * primary_ray.layers[i].normal, ao_dir, ao_ray_dist);
         if (ao_check.voxel_data >> 24 == MAT_OOB)
         {
-            float light_power = pow(dot(ao_dir, -light_dir), 3.0);
+            float light_power = pow(max(dot(ao_dir, -light_dir), 0.0), 3.0);
             color += multiplier * get_light(ao_dir, -ray, (1 - mat_props.transparency) * ao_check.passthrough_light * float3(1.0), light_power, mat_props);
         }
 
@@ -564,7 +564,7 @@ float3 get_color(float3 pos, float3 ray, RaycastResult primary_ray, uint vertica
         ao_check = simple_raycast(primary_ray.layers[i].pos + epsilon * primary_ray.layers[i].normal, ao_dir, ao_ray_dist);
         if (ao_check.voxel_data >> 24 == MAT_OOB)
         {
-            float light_power = pow(dot(ao_dir, -light_dir), 3.0);
+            float light_power = pow(max(dot(ao_dir, -light_dir), 0.0), 3.0);
             color += multiplier * get_light(ao_dir, -ray, (1 - mat_props.transparency) * ao_check.passthrough_light * float3(1.0), light_power, mat_props);
         }
 
