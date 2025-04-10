@@ -70,17 +70,52 @@ void init_available(uint3 dispatchThreadId: SV_DispatchThreadID)
     availableChunks[dispatchThreadId.x] = dispatchThreadId.x + 1;
 }
 
-int3 get_index(int3 global_pos)
+int3 get_chunk_pos_of_global_pos(int3 global_pos)
 {
-    let chunk_pos = floorDiv(global_pos, CHUNK_SIZE);
-    let chunk_idx = chunks.Load(floorMod(chunk_pos, RENDER_SIZE));
-    let chunk_loc = int3(chunk_idx % MAX_CHUNKS_X, (chunk_idx / MAX_CHUNKS_X) % MAX_CHUNKS_Y, chunk_idx / MAX_CHUNKS_X / MAX_CHUNKS_Y);
+    return floorDiv(global_pos, CHUNK_SIZE);
+}
+
+uint3 get_chunk_ptr_of_chunk_pos(int3 chunk_pos)
+{
+    return floorMod(chunk_pos, RENDER_SIZE);
+}
+
+uint get_update_index_of_chunk_ptr(uint update_type, uint3 chunk_ptr)
+{
+    return update_type * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
+}
+
+uint get_update_index_of_chunk_pos(uint update_type, int3 chunk_pos)
+{
+    return get_update_index_of_chunk_ptr(update_type, get_chunk_ptr_of_chunk_pos(chunk_pos));
+}
+
+uint get_chunk_voxels_index_of_chunk_pos(int3 chunk_pos)
+{
+    return chunks.Load(get_chunk_ptr_of_chunk_pos(chunk_pos));
+}
+
+uint3 get_chunk_ptr_of_chunk_index(uint chunk_idx)
+{
+    return int3(chunk_idx % MAX_CHUNKS_X, (chunk_idx / MAX_CHUNKS_X) % MAX_CHUNKS_Y, chunk_idx / MAX_CHUNKS_X / MAX_CHUNKS_Y);
+}
+
+uint get_chunk_voxels_index_of_global_pos(int3 global_pos)
+{
+    return get_chunk_voxels_index_of_chunk_pos(get_chunk_pos_of_global_pos(global_pos));
+}
+
+int3 get_voxel_ptr_of_global_pos(int3 global_pos)
+{
+    let chunk_pos = get_chunk_pos_of_global_pos(global_pos);
+    let chunk_idx = get_chunk_voxels_index_of_chunk_pos(chunk_pos);
+    let chunk_loc = get_chunk_ptr_of_chunk_index(chunk_idx);
     return CHUNK_SIZE * chunk_loc + floorMod(global_pos, CHUNK_SIZE);
 }
 
 void unload_chunk(int3 chunk_pos)
 {
-    let chunk_ptr = floorMod(chunk_pos, RENDER_SIZE);
+    let chunk_ptr = get_chunk_ptr_of_chunk_pos(chunk_pos);
     let chunk_idx = chunks.Load(chunk_ptr);
     if (chunk_idx == 0)
         return;
@@ -105,7 +140,7 @@ bool chunk_in_bounds(int3 chunk_pos)
     return true;
 }
 
-void loadChunk(int3 chunk_pos)
+void load_chunk(int3 chunk_pos)
 {
     if (!chunk_in_bounds(chunk_pos))
         return;
@@ -138,33 +173,33 @@ void queue_update_all(int3 chunk_pos)
 {
     if (!chunk_in_bounds(chunk_pos))
         return;
-    let checkChunkIdx = floorMod(chunk_pos, RENDER_SIZE);
-    if (chunks.Load(checkChunkIdx) == 0)
+    let chunk_ptr = get_chunk_ptr_of_chunk_pos(chunk_pos);
+    if (chunks.Load(chunk_ptr) == 0)
     {
-        loadChunk(chunk_pos);
+        load_chunk(chunk_pos);
         return;
     }
-    let chunk_ptr = floorMod(chunk_pos, RENDER_SIZE);
-    for (var i = 0; i < 8; i++)
+    for (var chunk_update_type = 0; chunk_update_type < 8; chunk_update_type++)
     {
-        let chunk_idx = i * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
-        let updateCheckIdx = gameData[0].currentChunkUpdates[i].load();
-        if (updateCheckIdx >= MAX_CHUNK_UPDATES)
+        let update_idx = get_update_index_of_chunk_ptr(chunk_update_type, chunk_ptr);
+        let typed_update_count = gameData[0].currentChunkUpdates[chunk_update_type].load();
+        if (typed_update_count >= MAX_CHUNK_UPDATES)
         {
             continue;
         }
-        let was_already_queued = updatedChunks[chunk_idx].exchange(1);
-        if (was_already_queued == 1)
+        let was_already_queued = updatedChunks[update_idx].increment();
+        if (was_already_queued >= 1)
         {
+            updatedChunks[update_idx].decrement();
             continue;
         }
-        let updateIdx = gameData[0].currentChunkUpdates[i].increment();
-        if (updateIdx >= MAX_CHUNK_UPDATES)
+        let typed_update_idx = gameData[0].currentChunkUpdates[chunk_update_type].increment();
+        if (typed_update_idx >= MAX_CHUNK_UPDATES)
         {
-            updatedChunks[chunk_idx].exchange(0);
+            updatedChunks[update_idx].decrement();
             continue;
         }
-        chunkUpdates[updateIdx + i * MAX_CHUNK_UPDATES] = chunk_pos;
+        chunkUpdates[typed_update_idx + chunk_update_type * MAX_CHUNK_UPDATES] = chunk_pos;
     }
 }
 
@@ -223,7 +258,7 @@ int3 get_voxel_update_offset()
 
 uint get_data_unchecked(int3 global_pos)
 {
-    return voxels.Load(get_index(global_pos));
+    return voxels.Load(get_voxel_ptr_of_global_pos(global_pos));
 }
 
 uint get_data(int3 global_pos)
@@ -246,7 +281,7 @@ void set_data(int3 global_pos, uint data)
         return;
     if (og_voxel_data != data)
     {
-        let chunk_pos = floorDiv(global_pos, CHUNK_SIZE);
+        let chunk_pos = get_chunk_pos_of_global_pos(global_pos);
         let pos_in_chunk = floorMod(global_pos, CHUNK_SIZE);
         let min_pos = select(pos_in_chunk == 0, -1, 0);
         let max_pos = select(pos_in_chunk == CHUNK_SIZE - 1, 1, 0);
@@ -255,5 +290,5 @@ void set_data(int3 global_pos, uint data)
                 for (var dz = min_pos.z; dz <= max_pos.z; dz++)
                     queue_update_all(chunk_pos + int3(dx, dy, dz));
     }
-    voxels.Store(get_index(global_pos), data);
+    voxels.Store(get_voxel_ptr_of_global_pos(global_pos), data);
 }

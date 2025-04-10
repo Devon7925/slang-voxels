@@ -116,15 +116,17 @@ uint get_worldgen(int3 global_pos)
 void worldgen_setup(uint3 dispatchThreadId: SV_DispatchThreadID)
 {
     let chunk_location = chunkLoads[dispatchThreadId.x].xyz;
+
+    let chunk_ptr = floorMod(chunk_location, RENDER_SIZE);
+    let chunk_idx = 8 * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
+    updatedChunks[chunk_idx].store(0);
+    
     if (!chunk_in_bounds(chunk_location))
     {
         return;
     }
-    let chunk_ptr = floorMod(chunk_location, RENDER_SIZE);
-    chunks.Store(chunk_ptr, chunkLoads[dispatchThreadId.x].w);
 
-    let chunk_idx = 8 * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
-    updatedChunks[chunk_idx].store(0);
+    chunks.Store(chunk_ptr, chunkLoads[dispatchThreadId.x].w);
 }
 
 [numthreads(4, 4, 4)]

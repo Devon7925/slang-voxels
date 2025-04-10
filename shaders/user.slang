@@ -133,7 +133,7 @@ void update(uint2 dispatchThreadId: SV_DispatchThreadID)
                 let checkChunkIdx = floorMod(checkChunk, RENDER_SIZE);
                 if (chunks.Load(checkChunkIdx) == 0)
                 {
-                    loadChunk(checkChunk);
+                    load_chunk(checkChunk);
                 }
             }
         }

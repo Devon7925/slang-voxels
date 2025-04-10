@@ -8,15 +8,15 @@ void voxelUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
 {
     uint idx = dispatchThreadId.x * 2 / CHUNK_SIZE;
     let chunk = chunkUpdates[idx + MAX_CHUNK_UPDATES * gameData[0].voxelOffset];
-    if (!chunk_in_bounds(chunk))
-    {
-        return;
-    }
     let pos_in_chunk = (dispatchThreadId * 2) % CHUNK_SIZE;
 
     let chunk_ptr = floorMod(chunk, RENDER_SIZE);
     let chunk_idx = gameData[0].voxelOffset * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
     updatedChunks[chunk_idx].store(0);
+    if (!chunk_in_bounds(chunk))
+    {
+        return;
+    }
 
     int3 pos = CHUNK_SIZE * chunk + pos_in_chunk + get_voxel_update_offset();
     uint2 pos_data[2][2][2];
