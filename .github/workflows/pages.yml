@@ -29,10 +29,9 @@ jobs:
           fileName: 'slang-*-linux-x86_64.tar.gz'
           out-file-path: 'slang'
           extract: true
-      - name: Update lunarg slang
+      - name: Set environment variables
         run: |
-          export SLANG_DIR="${{ github.workspace }}/slang"
-          echo $SLANG_DIR
+          echo "SLANG_DIR=${{ github.workspace }}/slang" >> $GITHUB_ENV
       - name: Setup toolchain for wasm
         run: |
           rustup update stable
