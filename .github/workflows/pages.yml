@@ -32,7 +32,7 @@ jobs:
       - name: Set environment variables
         run: |
           echo "SLANG_DIR=${{ github.workspace }}/slang" >> $GITHUB_ENV
-          cp slang/bin/slang.dll slang.dll
+          cp slang/lib/libslang.so libslang.so
       - name: Setup toolchain for wasm
         run: |
           rustup update stable
