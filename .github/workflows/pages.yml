@@ -31,7 +31,8 @@ jobs:
           extract: true
       - name: Update lunarg slang
         run: |
-          export SLANG_DIR=${{ github.workspace }}/slang
+          export SLANG_DIR="${{ github.workspace }}/slang"
+          echo $SLANG_DIR
       - name: Setup toolchain for wasm
         run: |
           rustup update stable
