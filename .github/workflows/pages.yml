@@ -21,8 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4 # repo checkout
-      - name: Install Vulkan SDK
-        uses: jakoch/install-vulkan-sdk-action@v1.1.0
       - name: Download latest Slang release
         uses: robinraju/release-downloader@v1
         with:
@@ -33,11 +31,7 @@ jobs:
           extract: true
       - name: Update lunarg slang
         run: |
-          cp -rv slang/lib/* $VULKAN_SDK/lib
-          cp -rv slang/bin/* $VULKAN_SDK/bin
-          cp -rv slang/include/* $VULKAN_SDK/include/slang
-          cp -rv slang/share/* $VULKAN_SDK/share
-          cp -rv slang/cmake/* $VULKAN_SDK/lib/cmake
+          export SLANG_DIR=${{ github.workspace }}/slang
       - name: Setup toolchain for wasm
         run: |
           rustup update stable
