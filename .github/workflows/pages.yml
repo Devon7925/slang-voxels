@@ -20,7 +20,8 @@ jobs:
   build-github-pages:
     runs-on: ubuntu-latest
     env:
-      LD_LIBRARY_PATH: ${{ github.workspace }}/slang/lib:$LD_LIBRARY_PATH
+      LD_LIBRARY_PATH: ${{ github.workspace }}/slang/lib:$LD_LIBRARY_PATH  
+      RUST_BACKTRACE: full
     steps:
       - uses: actions/checkout@v4 # repo checkout
       - name: Download latest Slang release
@@ -44,7 +45,7 @@ jobs:
       - name: Rust Cache # cache the rust build artifacts
         uses: Swatinem/rust-cache@v2
       - name: Build
-        run: RUST_BACKTRACE=1 cargo build --target wasm32-unknown-unknown
+        run: cargo build --target wasm32-unknown-unknown
       - name: Bindgen
         run: wasm-bindgen --out-dir target/generated/ --web target/wasm32-unknown-unknown/debug/slang-voxels.wasm 
       - name: Move files
