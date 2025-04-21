@@ -22,6 +22,7 @@ jobs:
     env:
       LD_LIBRARY_PATH: ${{ github.workspace }}/slang/lib:$LD_LIBRARY_PATH  
       RUST_BACKTRACE: full
+      SLANG_DIR: ${{ github.workspace }}/slang
     steps:
       - uses: actions/checkout@v4 # repo checkout
       - name: Download latest Slang release
@@ -32,9 +33,6 @@ jobs:
           fileName: 'slang-*-linux-x86_64.tar.gz'
           out-file-path: 'slang'
           extract: true
-      - name: Set environment variables
-        run: |
-          echo "SLANG_DIR=${{ github.workspace }}/slang" >> $GITHUB_ENV
       - name: Setup toolchain for wasm
         run: |
           rustup update stable
@@ -45,7 +43,7 @@ jobs:
       - name: Rust Cache # cache the rust build artifacts
         uses: Swatinem/rust-cache@v2
       - name: Build
-        run: cargo build --target wasm32-unknown-unknown
+        run: cargo build --target wasm32-unknown-unknown --verbose
       - name: Bindgen
         run: wasm-bindgen --out-dir target/generated/ --web target/wasm32-unknown-unknown/debug/slang-voxels.wasm 
       - name: Move files
