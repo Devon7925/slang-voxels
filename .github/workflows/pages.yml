@@ -33,6 +33,17 @@ jobs:
           fileName: 'slang-*-linux-x86_64.tar.gz'
           out-file-path: 'slang'
           extract: true
+      - name: Download latest Slang windows release for dll
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: 'shader-slang/slang'
+          latest: true
+          fileName: 'slang-*-windiws-x86_64.tar.gz'
+          out-file-path: 'slang_win'
+          extract: true
+      - name: Set environment variables
+        run: |
+          cp slang_win/bin/slang.dll slang.dll
       - name: Setup toolchain for wasm
         run: |
           rustup update stable
