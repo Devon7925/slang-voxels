@@ -38,7 +38,7 @@ jobs:
         with:
           repository: 'shader-slang/slang'
           latest: true
-          fileName: 'slang-*-windiws-x86_64.tar.gz'
+          fileName: 'slang-*-windows-x86_64.tar.gz'
           out-file-path: 'slang_win'
           extract: true
       - name: Set environment variables
