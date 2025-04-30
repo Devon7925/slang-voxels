@@ -34,6 +34,9 @@ jobs:
       - name: Set up PATH
         run: |
           echo "${{ github.workspace }}\\slang\\bin" | Out-File -Append -FilePath $env:GITHUB_PATH
+      - name: Copy slang dll
+        run: |
+          cp slang/bin/slang.dll ./slang.dll
       - name: Setup toolchain for wasm
         run: |
           rustup update stable
