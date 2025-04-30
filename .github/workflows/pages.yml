@@ -20,7 +20,6 @@ jobs:
   build-github-pages:
     runs-on: windows-latest
     env:
-      PATH: ${{ github.workspace }}/slang/bin:$PATH
       SLANG_DIR: ${{ github.workspace }}/slang
     steps:
       - uses: actions/checkout@v4 # repo checkout
@@ -32,6 +31,9 @@ jobs:
           fileName: 'slang-*-windows-x86_64.zip'
           out-file-path: 'slang'
           extract: true
+      - name: Set up PATH
+        run: |
+          echo "${{ github.workspace }}\\slang\\bin" | Out-File -Append -FilePath $env:GITHUB_PATH
       - name: Setup toolchain for wasm
         run: |
           rustup update stable
