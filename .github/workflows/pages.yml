@@ -20,8 +20,7 @@ jobs:
   build-github-pages:
     runs-on: ubuntu-latest
     env:
-      LD_LIBRARY_PATH: ${{ github.workspace }}/slang/lib:$LD_LIBRARY_PATH  
-      RUST_BACKTRACE: full
+      LD_LIBRARY_PATH: ${{ github.workspace }}/slang/lib:$LD_LIBRARY_PATH
       SLANG_DIR: ${{ github.workspace }}/slang
     steps:
       - uses: actions/checkout@v4 # repo checkout
@@ -33,15 +32,6 @@ jobs:
           fileName: 'slang-*-linux-x86_64.tar.gz'
           out-file-path: 'slang'
           extract: true
-      - name: List extracted Slang files
-        run: ls -l ${{ github.workspace }}/slang/lib
-      - name: Log library
-        run: |
-          echo '#include <slang.h>' > test.cpp
-          echo 'int main() { return 0; }' >> test.cpp
-          g++ test.cpp -I${{ github.workspace }}/slang/include -L${{ github.workspace }}/slang/lib -lslang -o test_slang
-          LD_LIBRARY_PATH=${{ github.workspace }}/slang/lib \
-          LD_TRACE_LOADED_OBJECTS=1 ./test_slang | grep libslang || true
       - name: Setup toolchain for wasm
         run: |
           rustup update stable
@@ -52,7 +42,7 @@ jobs:
       - name: Rust Cache # cache the rust build artifacts
         uses: Swatinem/rust-cache@v2
       - name: Build
-        run: cargo build --target wasm32-unknown-unknown --verbose
+        run: strace -f -e trace=open,openat cargo build --target wasm32-unknown-unknown --verbose
       - name: Bindgen
         run: wasm-bindgen --out-dir target/generated/ --web target/wasm32-unknown-unknown/debug/slang-voxels.wasm 
       - name: Move files
