@@ -21,7 +21,7 @@ jobs:
     runs-on: windows-latest
     env:
       PATH: ${{ github.workspace }}/slang/bin:$PATH
-      SLANG_DIR: ${{ github.workspace\ }}/slang
+      SLANG_DIR: ${{ github.workspace }}/slang
     steps:
       - uses: actions/checkout@v4 # repo checkout
       - name: Download latest Slang release
@@ -42,7 +42,7 @@ jobs:
       - name: Rust Cache # cache the rust build artifacts
         uses: Swatinem/rust-cache@v2
       - name: Build
-        run: strace -f -e trace=open,openat cargo build --target wasm32-unknown-unknown --verbose
+        run: cargo build --target wasm32-unknown-unknown --verbose
       - name: Bindgen
         run: wasm-bindgen --out-dir target/generated/ --web target/wasm32-unknown-unknown/debug/slang-voxels.wasm 
       - name: Move files
