@@ -18,10 +18,10 @@ permissions:
 
 jobs:
   build-github-pages:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     env:
-      LD_LIBRARY_PATH: ${{ github.workspace }}/slang/lib:$LD_LIBRARY_PATH
-      SLANG_DIR: ${{ github.workspace }}/slang
+      PATH: ${{ github.workspace }}/slang/bin:$PATH
+      SLANG_DIR: ${{ github.workspace\ }}/slang
     steps:
       - uses: actions/checkout@v4 # repo checkout
       - name: Download latest Slang release
@@ -29,7 +29,7 @@ jobs:
         with:
           repository: 'shader-slang/slang'
           latest: true
-          fileName: 'slang-*-linux-x86_64.tar.gz'
+          fileName: 'slang-*-windows-x86_64.zip'
           out-file-path: 'slang'
           extract: true
       - name: Setup toolchain for wasm
