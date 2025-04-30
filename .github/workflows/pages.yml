@@ -35,7 +35,8 @@ jobs:
           extract: true
       - name: Log library
         run: |
-          ldconfig -p | grep libslang.so
+          LD_TRACE_LOADED_OBJECTS=1 /bin/true | grep libslang
+          ls -l ${{ github.workspace }}/slang/lib
       - name: Setup toolchain for wasm
         run: |
           rustup update stable
