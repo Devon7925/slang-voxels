@@ -33,10 +33,12 @@ jobs:
           fileName: 'slang-*-linux-x86_64.tar.gz'
           out-file-path: 'slang'
           extract: true
+      - name: List extracted Slang files
+        run: ls -l ${{ github.workspace }}/slang/lib
       - name: Log library
         run: |
           echo '#include <slang.h>\nint main() { return 0; }' > test.c
-          gcc test.c -L${{ github.workspace }}/slang/lib -lslang -o test_slang
+          gcc test.c -I${{ github.workspace }}/slang/include -L${{ github.workspace }}/slang/lib -lslang -o test_slang
           LD_LIBRARY_PATH=${{ github.workspace }}/slang/lib \
           LD_TRACE_LOADED_OBJECTS=1 ./test_slang | grep libslang
       - name: Setup toolchain for wasm
