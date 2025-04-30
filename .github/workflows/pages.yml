@@ -35,8 +35,10 @@ jobs:
           extract: true
       - name: Log library
         run: |
-          LD_TRACE_LOADED_OBJECTS=1 /bin/true | grep libslang
-          ls -l ${{ github.workspace }}/slang/lib
+          echo '#include <slang.h>\nint main() { return 0; }' > test.c
+          gcc test.c -L${{ github.workspace }}/slang/lib -lslang -o test_slang
+          LD_LIBRARY_PATH=${{ github.workspace }}/slang/lib \
+          LD_TRACE_LOADED_OBJECTS=1 ./test_slang | grep libslang
       - name: Setup toolchain for wasm
         run: |
           rustup update stable
