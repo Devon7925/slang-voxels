@@ -32,12 +32,10 @@ jobs:
           out-file-path: 'slang'
           extract: true
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
-          profile: minimal
+          toolchain: 1.85.1
           target: wasm32-unknown-unknown
-          override: true
       - name: Setup toolchain for wasm
         run: |
           cargo install wasm-bindgen-cli
