@@ -31,23 +31,20 @@ jobs:
           fileName: 'slang-*-windows-x86_64.zip'
           out-file-path: 'slang'
           extract: true
-      - name: Set up PATH
-        run: |
-          echo "${{ github.workspace }}\\slang\\bin" | Out-File -Append -FilePath $env:GITHUB_PATH
-      - name: Copy slang dll
-        run: |
-          cp slang/bin/slang.dll ./slang.dll
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          target: wasm32-unknown-unknown
+          override: true
       - name: Setup toolchain for wasm
         run: |
-          rustup update stable
-          rustup default stable
-          rustup set profile minimal
-          rustup target add wasm32-unknown-unknown
           cargo install wasm-bindgen-cli
       - name: Rust Cache # cache the rust build artifacts
         uses: Swatinem/rust-cache@v2
       - name: Build
-        run: cargo build --target wasm32-unknown-unknown --verbose
+        run: cargo build --target wasm32-unknown-unknown
       - name: Bindgen
         run: wasm-bindgen --out-dir target/generated/ --web target/wasm32-unknown-unknown/debug/slang-voxels.wasm 
       - name: Move files
