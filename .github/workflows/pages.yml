@@ -34,7 +34,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.85.1
+          toolchain: stable
           target: wasm32-unknown-unknown
       - name: Setup toolchain for wasm
         run: |
