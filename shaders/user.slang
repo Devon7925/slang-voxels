@@ -9,22 +9,22 @@ import voxel_update;
 [playground::BLACK_SCREEN(1.0, 1.0)]
 WTexture2D<float4> screen;
 
-[playground::KEY_INPUT("W")]
+[playground::KEY("KeyW")]
 uniform float wPressed;
-[playground::KEY_INPUT("A")]
+[playground::KEY("KeyA")]
 uniform float aPressed;
-[playground::KEY_INPUT("S")]
+[playground::KEY("KeyS")]
 uniform float sPressed;
-[playground::KEY_INPUT("D")]
+[playground::KEY("KeyD")]
 uniform float dPressed;
-[playground::KEY_INPUT("Space")]
+[playground::KEY("Space")]
 uniform float spacePressed;
-[playground::KEY_INPUT("Ctrl")]
+[playground::KEY("ControlLeft")]
 uniform float ctrlPressed;
-[playground::KEY_INPUT("Shift")]
+[playground::KEY("ShiftLeft")]
 uniform float shiftPressed;
 
-[playground::KEY_INPUT("1")]
+[playground::KEY("Digit1")]
 uniform float createWater;
 
 [playground::SLIDER(5.0, 0.0, 20.0)]
