@@ -3112,7 +3112,7 @@ dependencies = [
 [[package]]
 name = "slang-native-playground"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#fcd56c134e1432b3a7283a688ef9f701eb74890c"
+source = "git+https://github.com/Devon7925/slang-native-playground#61801d0279b1e20515b6a4809f6355674f72c746"
 dependencies = [
  "bytemuck",
  "console_error_panic_hook",
@@ -3141,7 +3141,7 @@ dependencies = [
 [[package]]
 name = "slang-playground-compiler"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#fcd56c134e1432b3a7283a688ef9f701eb74890c"
+source = "git+https://github.com/Devon7925/slang-native-playground#61801d0279b1e20515b6a4809f6355674f72c746"
 dependencies = [
  "bytemuck",
  "egui",
@@ -3172,7 +3172,7 @@ dependencies = [
 [[package]]
 name = "slang-shader-macros"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#fcd56c134e1432b3a7283a688ef9f701eb74890c"
+source = "git+https://github.com/Devon7925/slang-native-playground#61801d0279b1e20515b6a4809f6355674f72c746"
 dependencies = [
  "base64",
  "proc-macro2",
