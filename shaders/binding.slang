@@ -45,7 +45,7 @@ RWStructuredBuffer<int3> chunkUpdates;
 
 struct GameData
 {
-    float3 playerPos;
+    float4 prevMouse;
     int voxelOffset;
     int3 startPos;
     Atomic<int> chunksAvailable;
@@ -55,6 +55,9 @@ struct GameData
 
 [playground::ZEROS(1)]
 RWStructuredBuffer<GameData> gameData;
+
+[playground::ZEROS(1)]
+RWStructuredBuffer<Player> players;
 
 [playground::ZEROS(12)]
 RWStructuredBuffer<uint> indirectBuffer;
@@ -209,7 +212,7 @@ void queue_update_all(int3 chunk_pos)
 [numthreads(1, 1, 1)]
 void setup(uint3 dispatchThreadId: SV_DispatchThreadID)
 {
-    gameData[0].playerPos = float3(10.0, 100.0, 10.0);
+    players[0] = Player::default();
 
     uint3 voxelSize;
     voxels.GetDimensions(voxelSize.x, voxelSize.y, voxelSize.z);
@@ -242,12 +245,6 @@ void setup(uint3 dispatchThreadId: SV_DispatchThreadID)
 void setUnloadedChunk(uint3 dispatchThreadId: SV_DispatchThreadID)
 {
     voxels.Store(dispatchThreadId, MAT_OOB << 24);
-}
-
-float3 getCameraDirection(float2 imageSize)
-{
-    float2 cameraControl = -3.141592 / 2.0 * (2.0 * mousePosition.xy / imageSize - 1.0);
-    return float3(sin(cameraControl.x) * cos(cameraControl.y), sin(cameraControl.y), cos(cameraControl.x) * cos(cameraControl.y));
 }
 
 int3 get_voxel_update_offset()

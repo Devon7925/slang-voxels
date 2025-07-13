@@ -27,13 +27,6 @@ struct RaycastResult
     float dist;
 };
 
-float3 ray_box_dist(float3 pos, float3 ray, float3 vmin, float3 vmax)
-{
-    float3 normMinDiff = (vmin - pos) / ray;
-    float3 normMaxDiff = (vmax - pos) / ray;
-    return max(normMinDiff, normMaxDiff);
-}
-
 RaycastResultLayer single_raycast(float3 pos, float3 ray, uint max_iterations)
 {
     uint offset = 0;

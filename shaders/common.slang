@@ -34,9 +34,10 @@ struct Projectile
 
 struct Player
 {
-    float4 pos;
+    float3 pos;
     float4 rot;
-    float4 vel;
+    float3 vel;
+    float3 movement_direction;
     float4 dir;
     float4 up;
     float4 right;
@@ -45,6 +46,24 @@ struct Player
     float3 gravity;
     uint has_world_collision;
 };
+
+extension Player {
+    static Player default() {
+        return Player(
+            float3(10.0, 100.0, 10.0),
+            float4(0.0, 0.0, 0.0, 1.0),
+            float3(0.0, 0.0, 0.0),
+            float3(0.0, 0.0, 0.0),
+            float4(1.0, 0.0, 0.0, 1.0),
+            float4(0.0, 1.0, 0.0, 1.0),
+            float4(0.0, 0.0, 1.0, 1.0),
+            int3(0, 0, 0),
+            1.0,
+            float3(0.0, -1.0, 0.0),
+            1
+        );
+    }
+}
 
 struct Collision
 {
@@ -449,4 +468,11 @@ float4 grad_noise(in float3 x)
                      u.yzx * u.zxy * (-va + vb + vc - vd + ve - vf - vg + vh));
 
     return float4(d, v);
+}
+
+float3 ray_box_dist(float3 pos, float3 ray, float3 vmin, float3 vmax)
+{
+    float3 normMinDiff = (vmin - pos) / ray;
+    float3 normMaxDiff = (vmax - pos) / ray;
+    return max(normMinDiff, normMaxDiff);
 }
