@@ -1,3 +1,5 @@
+mod egui_tools;
+
 use slang_playground_compiler::CompilationResult;
 use slang_renderer::Renderer;
 use wgpu::Features;
@@ -26,6 +28,7 @@ struct RenderData {
     pub surface: wgpu::Surface<'static>,
     pub device: Arc<wgpu::Device>,
     pub queue: Arc<wgpu::Queue>,
+    pub egui_renderer: egui_tools::EguiRenderer,
 }
 
 impl RenderData {
@@ -64,12 +67,17 @@ impl RenderData {
                 queue.clone(),
             ).await;
 
-        configure_surface(&surface, &device, window.inner_size(), wgpu::TextureFormat::Rgba8Unorm);
+        let surface_format = wgpu::TextureFormat::Rgba8Unorm;
+        configure_surface(&surface, &device, window.inner_size(), surface_format);
+
+        let egui_renderer =
+            egui_tools::EguiRenderer::new(&device, surface_format, None, 1, &window);
 
         RenderData {
             state: state,
             window: window,
             surface: surface,
+            egui_renderer,
             device: device,
             queue: queue,
         }
@@ -137,6 +145,45 @@ impl App {
             .create_command_encoder(&Default::default());
         render_data.state.run_compute_passes(&mut encoder);
         render_data.state.run_draw_passes(&mut encoder, &texture_view);
+
+        {
+            use egui::*;
+
+            let screen_descriptor = egui_wgpu::ScreenDescriptor {
+                size_in_pixels: [surface_texture.texture.width(), surface_texture.texture.height()],
+                pixels_per_point: render_data.window.scale_factor() as f32,
+            };
+
+            render_data.egui_renderer.begin_frame(&render_data.window);
+            egui::CentralPanel::default().frame(Frame::default().fill(Color32::TRANSPARENT)).show(render_data.egui_renderer.context(), |ui| {
+                // Draw basic crosshair
+                let center = ui.clip_rect().center();
+                ui.painter().line_segment(
+                    [
+                        pos2(center.x - 10.0, center.y),
+                        pos2(center.x + 10.0, center.y),
+                    ],
+                    Stroke::new(2.0, Color32::WHITE),
+                );
+                ui.painter().line_segment(
+                    [
+                        pos2(center.x, center.y - 10.0),
+                        pos2(center.x, center.y + 10.0),
+                    ],
+                    Stroke::new(2.0, Color32::WHITE),
+                );
+            });
+
+            render_data.egui_renderer.end_frame_and_draw(
+                &render_data.device,
+                &render_data.queue,
+                &mut encoder,
+                &render_data.window,
+                &texture_view,
+                screen_descriptor,
+            );
+        }
+
         render_data.queue.submit([encoder.finish()]);
         render_data.state.handle_print_output();
         surface_texture.present();
@@ -254,6 +301,7 @@ impl ApplicationHandler for App {
             _ => (),
         }
 
+        render_data.egui_renderer.handle_input(&render_data.window, &event);
         render_data.state.process_event(&event);
     }
 
