@@ -1,9 +1,13 @@
+mod shared;
 mod egui_tools;
+mod settings_manager;
+mod gui;
+mod lobby_browser;
 
 use slang_playground_compiler::CompilationResult;
 use slang_renderer::Renderer;
 use wgpu::Features;
-use std::sync::Arc;
+use std::{fs, sync::Arc};
 use winit::{
     application::ApplicationHandler,
     dpi::PhysicalSize,
@@ -21,6 +25,8 @@ extern crate console_error_panic_hook;
 
 #[cfg(not(target_arch = "wasm32"))]
 use slang_debug_app::DebugAppState;
+
+use crate::{gui::{horizontal_centerer, vertical_centerer, GuiElement, GuiState, PaletteState}, lobby_browser::LobbyBrowser, settings_manager::Settings};
 
 struct RenderData {
     pub state: Renderer,
@@ -104,6 +110,8 @@ fn configure_surface(surface: &wgpu::Surface, device: &wgpu::Device, size: Physi
         .configure(device, &surface_config);
 }
 
+const SETTINGS_FILE: &str = "settings.yaml";
+
 struct App {
     render_data: Option<RenderData>,
     #[cfg(target_arch = "wasm32")]
@@ -112,9 +120,28 @@ struct App {
     debug_app: Option<DebugAppState>,
     compilation: Option<CompilationResult>,
     surface_format: wgpu::TextureFormat,
+    settings: Settings,
+    gui_state: GuiState,
 }
+
 impl App {
     fn new(compilation: CompilationResult) -> Self {
+        let settings = Settings::from_string(fs::read_to_string(SETTINGS_FILE).unwrap().as_str());
+
+        let gui_state = GuiState {
+            menu_stack: vec![GuiElement::MainMenu],
+            errors: Vec::new(),
+            // gui_deck: player_deck.clone(),
+            // render_deck: player_deck.clone(),
+            // dock_cards: vec![],
+            render_deck_idx: 0,
+            cooldown_cache_refresh_delay: 0.0,
+            palette_state: PaletteState::BaseCards,
+            should_exit: false,
+            game_just_started: false,
+            lobby_browser: LobbyBrowser::new(),
+        };
+
         Self {
             render_data: None,
             #[cfg(target_arch = "wasm32")]
@@ -123,6 +150,8 @@ impl App {
             debug_app: None,
             compilation: Some(compilation),
             surface_format: wgpu::TextureFormat::Rgba8Unorm,
+            settings,
+            gui_state,
         }
     }
 
@@ -155,24 +184,459 @@ impl App {
             };
 
             render_data.egui_renderer.begin_frame(&render_data.window);
-            egui::CentralPanel::default().frame(Frame::default().fill(Color32::TRANSPARENT)).show(render_data.egui_renderer.context(), |ui| {
-                // Draw basic crosshair
-                let center = ui.clip_rect().center();
-                ui.painter().line_segment(
-                    [
-                        pos2(center.x - 10.0, center.y),
-                        pos2(center.x + 10.0, center.y),
-                    ],
-                    Stroke::new(2.0, Color32::WHITE),
-                );
-                ui.painter().line_segment(
-                    [
-                        pos2(center.x, center.y - 10.0),
-                        pos2(center.x, center.y + 10.0),
-                    ],
-                    Stroke::new(2.0, Color32::WHITE),
-                );
-            });
+
+            let ctx = render_data.egui_renderer.context();
+            match self.gui_state.menu_stack.last() {
+                Some(&GuiElement::MainMenu) => {
+                    egui::Area::new("main menu".into())
+                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .show(&ctx, |ui| {
+                            let menu_size = Rect::from_center_size(
+                                ui.available_rect_before_wrap().center(),
+                                ui.available_rect_before_wrap().size(),
+                            );
+
+                            ui.scope_builder(UiBuilder::new().max_rect(menu_size), |ui| {
+                                ui.painter().rect_filled(
+                                    ui.available_rect_before_wrap(),
+                                    0.0,
+                                    Color32::BLACK,
+                                );
+                                vertical_centerer(ui, |ui| {
+                                    ui.vertical_centered(|ui| {
+                                        if ui.button("Singleplayer").clicked() {
+                                            self.gui_state.menu_stack.push(GuiElement::SingleplayerMenu);
+                                        }
+                                        if ui.button("Multiplayer").clicked() {
+                                            self.gui_state.menu_stack.push(GuiElement::MultiplayerMenu);
+                                        }
+                                        if ui.button("Deck Picker").clicked() {
+                                            self.gui_state.menu_stack.push(GuiElement::DeckPicker);
+                                        }
+                                        // if ui.button("Play Replay").clicked() {
+                                        //     let mut replay_folder_path =
+                                        //         std::env::current_dir().unwrap();
+                                        //     replay_folder_path.push(
+                                        //         self.settings.replay_settings.replay_folder.clone(),
+                                        //     );
+                                        //     let file = FileDialog::new()
+                                        //         .add_filter("replay", &["replay"])
+                                        //         .set_directory(replay_folder_path)
+                                        //         .pick_file();
+                                        //     if let Some(file) = file {
+                                        //         self.gui_state.menu_stack.pop();
+                                        //         *game = Some(Game::from_replay(
+                                        //             file.as_path(),
+                                        //             creation_interface,
+                                        //         ));
+                                        //         self.gui_state.game_just_started = true;
+                                        //     }
+                                        // }
+                                        if ui.button("Card Editor").clicked() {
+                                            self.gui_state.menu_stack.push(GuiElement::CardEditor);
+                                        }
+                                        if ui.button("Exit to Desktop").clicked() {
+                                            self.gui_state.should_exit = true;
+                                        }
+                                    });
+                                });
+                            });
+                        });
+                }
+                Some(&GuiElement::SingleplayerMenu) => {
+                    egui::Area::new("singleplayer menu".into())
+                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .show(&ctx, |ui| {
+                            let menu_size = Rect::from_center_size(
+                                ui.available_rect_before_wrap().center(),
+                                ui.available_rect_before_wrap().size(),
+                            );
+
+                            ui.scope_builder(UiBuilder::new().max_rect(menu_size), |ui| {
+                                ui.painter().rect_filled(
+                                    ui.available_rect_before_wrap(),
+                                    0.0,
+                                    Color32::BLACK,
+                                );
+                                vertical_centerer(ui, |ui| {
+                                    ui.vertical_centered(|ui| {
+                                        for preset in self.settings.preset_settings.iter() {
+                                            if ui.button(&preset.name).clicked() {
+                                                self.gui_state.menu_stack.clear();
+                                                // *game = Some(Game::new(
+                                                //     settings,
+                                                //     preset.clone(),
+                                                //     &gui_state.gui_deck,
+                                                //     creation_interface,
+                                                //     None,
+                                                // ));
+                                                self.gui_state.game_just_started = true;
+                                            }
+                                        }
+                                        if ui.button("Back").clicked() {
+                                            self.gui_state.menu_stack.pop();
+                                        }
+                                    });
+                                });
+                            });
+                        });
+                }
+                Some(&GuiElement::EscMenu) => {
+                    egui::Area::new("menu".into())
+                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .show(&ctx, |ui| {
+                            ui.painter().rect_filled(
+                                ui.available_rect_before_wrap(),
+                                0.0,
+                                Color32::BLACK.gamma_multiply(0.5),
+                            );
+
+                            let menu_size = Rect::from_center_size(
+                                ui.available_rect_before_wrap().center(),
+                                egui::vec2(300.0, 300.0),
+                            );
+
+                            ui.scope_builder(UiBuilder::new().max_rect(menu_size), |ui| {
+                                ui.painter().rect_filled(
+                                    ui.available_rect_before_wrap(),
+                                    0.0,
+                                    Color32::BLACK,
+                                );
+                                ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
+                                    ui.label(RichText::new("Menu").color(Color32::WHITE));
+                                    if ui.button("Card Editor").clicked() {
+                                        self.gui_state.menu_stack.push(GuiElement::CardEditor);
+                                    }
+                                    // if let Some(game) = game {
+                                    //     if game.game_mode.has_mode_gui() {
+                                    //         if ui.button("Mode configuration").clicked() {
+                                    //             self.gui_state.menu_stack.push(GuiElement::ModeGui);
+                                    //         }
+                                    //     }
+                                    // }
+                                    if ui.button("Leave Game").clicked() {
+                                        // if let Some(game) = game {
+                                        //     game.rollback_data.leave_game();
+                                        // }
+                                        self.gui_state.menu_stack.clear();
+                                        self.gui_state.menu_stack.push(GuiElement::MainMenu);
+                                        // *game = None;
+                                    }
+                                    if ui.button("Exit to Desktop").clicked() {
+                                        self.gui_state.should_exit = true;
+                                    }
+                                });
+                            });
+                        });
+                }
+                Some(&GuiElement::CardEditor) => {
+                    // card_editor(&ctx, gui_state, game);
+                }
+
+                Some(&GuiElement::MultiplayerMenu) => {
+                    egui::Area::new("multiplayer menu".into())
+                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .show(&ctx, |ui| {
+                            let menu_size = Rect::from_center_size(
+                                ui.available_rect_before_wrap().center(),
+                                ui.available_rect_before_wrap().size(),
+                            );
+
+                            ui.scope_builder(UiBuilder::new().max_rect(menu_size), |ui| {
+                                ui.painter().rect_filled(
+                                    ui.available_rect_before_wrap(),
+                                    0.0,
+                                    Color32::BLACK,
+                                );
+                                vertical_centerer(ui, |ui| {
+                                    ui.vertical_centered(|ui| {
+                                        if ui.button("Host").clicked() {
+                                            let client = reqwest::blocking::Client::new();
+                                            let new_lobby_response = client
+                                                .post(format!(
+                                                    "http://{}create_lobby",
+                                                    self.settings.remote_url.clone()
+                                                ))
+                                                .json(&self.settings.create_lobby_settings)
+                                                .send();
+                                            let new_lobby_response = match new_lobby_response {
+                                                Ok(new_lobby_response) => new_lobby_response,
+                                                Err(e) => {
+                                                    println!("error creating lobby: {:?}", e);
+                                                    self.gui_state.errors.push(
+                                                        format!("Error creating lobby {}", e)
+                                                            .to_string(),
+                                                    );
+                                                    return;
+                                                }
+                                            };
+                                            let new_lobby_id = new_lobby_response.json::<String>();
+                                            let new_lobby_id = match new_lobby_id {
+                                                Ok(new_lobby_id) => new_lobby_id,
+                                                Err(e) => {
+                                                    println!("error creating lobby: {:?}", e);
+                                                    self.gui_state.errors.push(
+                                                        format!("Error creating lobby {}", e)
+                                                            .to_string(),
+                                                    );
+                                                    return;
+                                                }
+                                            };
+                                            println!("new lobby id: {}", new_lobby_id);
+                                            // *game = Some(Game::new(
+                                            //     self.settings,
+                                            //     self.settings.create_lobby_settings.clone(),
+                                            //     &self.gui_state.gui_deck,
+                                            //     creation_interface,
+                                            //     Some(RoomId(new_lobby_id)),
+                                            // ));
+                                            self.gui_state.menu_stack.push(GuiElement::LobbyQueue);
+                                            self.gui_state.game_just_started = true;
+                                        }
+                                        if ui.button("Join").clicked() {
+                                            self.gui_state.lobby_browser.update(&self.settings);
+                                            self.gui_state.menu_stack.push(GuiElement::LobbyBrowser);
+                                        }
+                                        if ui.button("Back").clicked() {
+                                            self.gui_state.menu_stack.pop();
+                                        }
+                                    });
+                                });
+                            });
+                        });
+                }
+                Some(&GuiElement::LobbyBrowser) => {
+                    use egui_extras::{Column, TableBuilder};
+                    egui::Area::new("lobby browser".into())
+                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .show(&ctx, |ui| {
+                            let menu_size = Rect::from_center_size(
+                                ui.available_rect_before_wrap().center(),
+                                ui.available_rect_before_wrap().size(),
+                            );
+                            let lobby_list = match self.gui_state.lobby_browser.get_lobbies()
+                            {
+                                Ok(lobby_list) => lobby_list,
+                                Err(err) => {
+                                    self.gui_state.errors.push(format!(
+                                        "Error getting lobbies: {}",
+                                        err
+                                    ));
+                                    vec![]
+                                }
+                            };
+
+                            ui.scope_builder(UiBuilder::new().max_rect(menu_size), |ui| {
+                                ui.painter().rect_filled(
+                                    ui.available_rect_before_wrap(),
+                                    0.0,
+                                    Color32::BLACK,
+                                );
+                                vertical_centerer(ui, |ui| {
+                                    ui.vertical_centered(|ui| {
+                                        horizontal_centerer(ui, |ui| {
+                                            ui.vertical_centered(|ui| {
+                                                let available_height = ui.available_height();
+                                                let table = TableBuilder::new(ui)
+                                                    .striped(true)
+                                                    .resizable(false)
+                                                    .cell_layout(egui::Layout::left_to_right(
+                                                        egui::Align::Center,
+                                                    ))
+                                                    .column(Column::auto())
+                                                    .column(Column::auto())
+                                                    .column(Column::auto())
+                                                    .column(Column::auto())
+                                                    .column(Column::auto())
+                                                    .max_scroll_height(available_height);
+
+                                                table
+                                                    .header(20.0, |mut header| {
+                                                        header.col(|ui| {
+                                                            ui.strong("Name");
+                                                        });
+                                                        header.col(|ui| {
+                                                            ui.strong("Mode");
+                                                        });
+                                                        header.col(|ui| {
+                                                            ui.strong("Map");
+                                                        });
+                                                        header.col(|ui| {
+                                                            ui.strong("Players");
+                                                        });
+                                                        header.col(|ui| {
+                                                            ui.strong("");
+                                                        });
+                                                    })
+                                                    .body(|mut body| {
+                                                        for lobby in lobby_list.iter() {
+                                                            body.row(20.0, |mut row| {
+                                                                row.col(|ui| {
+                                                                    ui.label(lobby.name.clone());
+                                                                });
+                                                                row.col(|ui| {
+                                                                    ui.label(
+                                                                        lobby
+                                                                            .settings
+                                                                            .game_mode
+                                                                            .get_name(),
+                                                                    );
+                                                                });
+                                                                row.col(|ui| {
+                                                                    ui.label(
+                                                                        lobby
+                                                                            .settings
+                                                                            .world_gen
+                                                                            .get_name(),
+                                                                    );
+                                                                });
+                                                                row.col(|ui| {
+                                                                    ui.label(format!(
+                                                                        "{}/{}",
+                                                                        lobby.player_count,
+                                                                        lobby.settings.player_count
+                                                                    ));
+                                                                });
+                                                                row.col(|ui| {
+                                                                    if ui.button("Join").clicked() {
+                                                                        self.gui_state
+                                                                            .menu_stack
+                                                                            .clear();
+                                                                        // *game = Some(Game::new(
+                                                                        //     settings,
+                                                                        //     lobby.settings.clone(),
+                                                                        //     &gui_state.gui_deck,
+                                                                        //     creation_interface,
+                                                                        //     Some(
+                                                                        //         lobby
+                                                                        //             .lobby_id
+                                                                        //             .clone(),
+                                                                        //     ),
+                                                                        // ));
+                                                                        self.gui_state.menu_stack.push(
+                                                                            GuiElement::LobbyQueue,
+                                                                        );
+                                                                        self.gui_state
+                                                                            .game_just_started =
+                                                                            true;
+                                                                    }
+                                                                });
+                                                            });
+                                                        }
+                                                    });
+                                            });
+                                        });
+                                        if lobby_list.is_empty() {
+                                            ui.label("No lobbies found");
+                                        }
+                                        if ui.button("Back").clicked() {
+                                            self.gui_state.menu_stack.pop();
+                                        }
+                                    });
+                                });
+                            });
+                        });
+                }
+                Some(&GuiElement::LobbyQueue) => {
+                    egui::Area::new("lobby queue".into())
+                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .show(&ctx, |ui| {
+                            let menu_size = Rect::from_center_size(
+                                ui.available_rect_before_wrap().center(),
+                                ui.available_rect_before_wrap().size(),
+                            );
+
+                            ui.scope_builder(UiBuilder::new().max_rect(menu_size), |ui| {
+                                ui.painter().rect_filled(
+                                    ui.available_rect_before_wrap(),
+                                    0.0,
+                                    Color32::BLACK,
+                                );
+                                vertical_centerer(ui, |ui| {
+                                    ui.vertical_centered(|ui| {
+                                        ui.label("Waiting for players to join...");
+                                        // if let Some(game) = game {
+                                        //     ui.label(format!(
+                                        //         "Players: {}/{}",
+                                        //         game.rollback_data.player_count(),
+                                        //         game.game_settings.player_count
+                                        //     ));
+                                        // }
+                                        if ui.button("Back").clicked() {
+                                            self.gui_state.menu_stack.pop();
+                                            // *game = None;
+                                        }
+                                    });
+                                });
+                            });
+                        });
+                }
+                Some(&GuiElement::ModeGui) => {
+                    egui::Area::new("mode gui".into())
+                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .show(&ctx, |ui| {
+                            let menu_size = Rect::from_center_size(
+                                ui.available_rect_before_wrap().center(),
+                                ui.available_rect_before_wrap().size(),
+                            );
+
+                            ui.scope_builder(UiBuilder::new().max_rect(menu_size), |ui| {
+                                ui.painter().rect_filled(
+                                    ui.available_rect_before_wrap(),
+                                    0.0,
+                                    Color32::BLACK,
+                                );
+                                vertical_centerer(ui, |ui| {
+                                    ui.vertical_centered(|ui| {
+                                        // if let Some(game) = game {
+                                        //     game.game_mode.mode_gui(ui, &mut game.rollback_data);
+                                        // }
+                                        if ui.button("Back").clicked() {
+                                            self.gui_state.menu_stack.pop();
+                                            // *game = None;
+                                        }
+                                    });
+                                });
+                            });
+                        });
+                }
+                Some(GuiElement::DeckPicker) => {
+                    egui::Area::new("deck picker".into())
+                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .show(&ctx, |ui| {
+                            let menu_size = Rect::from_center_size(
+                                ui.available_rect_before_wrap().center(),
+                                ui.available_rect_before_wrap().size(),
+                            );
+
+                            ui.scope_builder(UiBuilder::new().max_rect(menu_size), |ui| {
+                                ui.painter().rect_filled(
+                                    ui.available_rect_before_wrap(),
+                                    0.0,
+                                    Color32::BLACK,
+                                );
+                                vertical_centerer(ui, |ui| {
+                                    ui.vertical_centered(|ui| {
+                                        // let Ok(decks) = recurse_files(self.settings.card_dir.clone()) else {
+                                        //     panic!("Cannot read directory {}", self.settings.card_dir);
+                                        // };
+                                        // for deck in decks {
+                                        //     if ui.button(deck.file_name().unwrap().to_str().unwrap()).clicked() {
+                                        //         self.gui_state.gui_deck = ron::from_str(fs::read_to_string(deck.as_path()).unwrap().as_str()).unwrap();
+                                        //         self.gui_state.menu_stack.pop();
+                                        //         self.gui_state.menu_stack.push(GuiElement::CardEditor);
+                                        //     }
+                                        // }
+                                        if ui.button("Back").clicked() {
+                                            self.gui_state.menu_stack.pop();
+                                        }
+                                    });
+                                });
+                            });
+                        });
+                }
+                None => {}
+            }
 
             render_data.egui_renderer.end_frame_and_draw(
                 &render_data.device,
@@ -324,7 +788,18 @@ impl ApplicationHandler for App {
     }
 }
 
-pub fn launch(compilation: CompilationResult) {
+#[cfg(target_family = "wasm")]
+mod wasm_workaround {
+    unsafe extern "C" {
+        pub(super) fn __wasm_call_ctors();
+    }
+}
+
+fn main() {
+    // https://github.com/rustwasm/wasm-bindgen/issues/4446
+    #[cfg(target_family = "wasm")]
+    unsafe { wasm_workaround::__wasm_call_ctors()};
+
     #[cfg(debug_assertions)]
     #[cfg(target_family = "wasm")]
     panic::set_hook(Box::new(console_error_panic_hook::hook));
@@ -349,22 +824,7 @@ pub fn launch(compilation: CompilationResult) {
     // the background.
     // event_loop.set_control_flow(ControlFlow::Wait);
 
+    let compilation: CompilationResult = compile_shader!("user.slang", ["shaders"]);
     let mut app = App::new(compilation);
     event_loop.run_app(&mut app).unwrap();
-}
-
-#[cfg(target_family = "wasm")]
-mod wasm_workaround {
-    unsafe extern "C" {
-        pub(super) fn __wasm_call_ctors();
-    }
-}
-
-fn main() {
-    // https://github.com/rustwasm/wasm-bindgen/issues/4446
-    #[cfg(target_family = "wasm")]
-    unsafe { wasm_workaround::__wasm_call_ctors()};
-
-    let compilation: CompilationResult = compile_shader!("user.slang", ["shaders"]);
-    launch(compilation);
 }

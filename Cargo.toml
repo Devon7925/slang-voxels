@@ -4,13 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+cgmath = { version = "0.18", features = ["serde"] }
 env_logger = "0.11.6"
 pollster = "0.4.0"
 wgpu = { version = "25.0.0", features = ["serde"] }
-winit = "0.30.12"
+winit = { version = "0.30.12", features = ["serde"] }
 bytemuck = "1.23.2"
 regex = "1.11.1"
 serde = { version = "1.0.217", features = ["derive"] }
+serde_yml = "0.0.10"
 ron = "0.10.1"
 flume = "0.11.1"
 web-time = "1.1.0"
@@ -25,6 +27,10 @@ slang-shader-macros = { git = "https://github.com/Devon7925/slang-native-playgro
 slang-renderer = { git = "https://github.com/Devon7925/slang-native-playground" }
 egui-wgpu = "0.32.0"
 egui = "0.32.0"
+reqwest = { version = "0.12.23", features = ["json", "blocking"] }
+any_spawner = "0.3.0"
+itertools = "0.14.0"
+egui_extras = "0.32.1"
 
 [target.wasm32-unknown-unknown.dependencies]
 getrandom = { version = "0.3.3", features = ["wasm_js"] }
