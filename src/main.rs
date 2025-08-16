@@ -29,7 +29,6 @@ use slang_debug_app::DebugAppState;
 use crate::{gui::{horizontal_centerer, vertical_centerer, GuiElement, GuiState, PaletteState}, lobby_browser::LobbyBrowser, settings_manager::Settings};
 
 struct RenderData {
-    pub state: Renderer,
     pub window: Arc<Window>,
     pub surface: wgpu::Surface<'static>,
     pub device: Arc<wgpu::Device>,
@@ -38,7 +37,7 @@ struct RenderData {
 }
 
 impl RenderData {
-    async fn new(window: Arc<Window>, compilation: CompilationResult) -> Self {
+    async fn new(window: Arc<Window>) -> Self {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
         let surface = instance.create_surface(window.clone()).unwrap();
 
@@ -66,13 +65,6 @@ impl RenderData {
         let device = Arc::new(device);
         let queue = Arc::new(queue);
 
-        let state = Renderer::new(
-                compilation,
-                window.inner_size(),
-                device.clone(),
-                queue.clone(),
-            ).await;
-
         let surface_format = wgpu::TextureFormat::Rgba8Unorm;
         configure_surface(&surface, &device, window.inner_size(), surface_format);
 
@@ -80,7 +72,6 @@ impl RenderData {
             egui_tools::EguiRenderer::new(&device, surface_format, None, 1, &window);
 
         RenderData {
-            state: state,
             window: window,
             surface: surface,
             egui_renderer,
@@ -114,6 +105,7 @@ const SETTINGS_FILE: &str = "settings.yaml";
 
 struct App {
     render_data: Option<RenderData>,
+    game: Option<Renderer>,
     #[cfg(target_arch = "wasm32")]
     state_receiver: Option<futures::channel::oneshot::Receiver<RenderData>>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -144,6 +136,7 @@ impl App {
 
         Self {
             render_data: None,
+            game: None,
             #[cfg(target_arch = "wasm32")]
             state_receiver: None,
             #[cfg(not(target_arch = "wasm32"))]
@@ -159,7 +152,7 @@ impl App {
         let Some(render_data) = self.render_data.as_mut() else {
             return;
         };
-        render_data.state.begin_frame();
+        
         let surface_texture = render_data.surface
             .get_current_texture()
             .expect("failed to acquire next swapchain texture");
@@ -172,8 +165,12 @@ impl App {
         let mut encoder = render_data
             .device
             .create_command_encoder(&Default::default());
-        render_data.state.run_compute_passes(&mut encoder);
-        render_data.state.run_draw_passes(&mut encoder, &texture_view);
+
+        if let Some(game) = self.game.as_mut() {
+            game.begin_frame();
+            game.run_compute_passes(&mut encoder);
+            game.run_draw_passes(&mut encoder, &texture_view);
+        }
 
         {
             use egui::*;
@@ -183,13 +180,17 @@ impl App {
                 pixels_per_point: render_data.window.scale_factor() as f32,
             };
 
+            let window_size = render_data.window.inner_size();
+            let device = render_data.device.clone();
+            let queue = render_data.queue.clone();
+
             render_data.egui_renderer.begin_frame(&render_data.window);
 
             let ctx = render_data.egui_renderer.context();
             match self.gui_state.menu_stack.last() {
                 Some(&GuiElement::MainMenu) => {
                     egui::Area::new("main menu".into())
-                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .anchor(Align2::CENTER_CENTER, Vec2::new(0.0, 0.0))
                         .show(&ctx, |ui| {
                             let menu_size = Rect::from_center_size(
                                 ui.available_rect_before_wrap().center(),
@@ -245,7 +246,7 @@ impl App {
                 }
                 Some(&GuiElement::SingleplayerMenu) => {
                     egui::Area::new("singleplayer menu".into())
-                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .anchor(Align2::CENTER_CENTER, Vec2::new(0.0, 0.0))
                         .show(&ctx, |ui| {
                             let menu_size = Rect::from_center_size(
                                 ui.available_rect_before_wrap().center(),
@@ -263,13 +264,12 @@ impl App {
                                         for preset in self.settings.preset_settings.iter() {
                                             if ui.button(&preset.name).clicked() {
                                                 self.gui_state.menu_stack.clear();
-                                                // *game = Some(Game::new(
-                                                //     settings,
-                                                //     preset.clone(),
-                                                //     &gui_state.gui_deck,
-                                                //     creation_interface,
-                                                //     None,
-                                                // ));
+                                                self.game = Some(pollster::block_on(Renderer::new(
+                                                    self.compilation.take().unwrap(),
+                                                    window_size,
+                                                    device.clone(),
+                                                    queue.clone(),
+                                                )));
                                                 self.gui_state.game_just_started = true;
                                             }
                                         }
@@ -283,7 +283,7 @@ impl App {
                 }
                 Some(&GuiElement::EscMenu) => {
                     egui::Area::new("menu".into())
-                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .anchor(Align2::CENTER_CENTER, Vec2::new(0.0, 0.0))
                         .show(&ctx, |ui| {
                             ui.painter().rect_filled(
                                 ui.available_rect_before_wrap(),
@@ -320,7 +320,7 @@ impl App {
                                         // }
                                         self.gui_state.menu_stack.clear();
                                         self.gui_state.menu_stack.push(GuiElement::MainMenu);
-                                        // *game = None;
+                                        self.game = None;
                                     }
                                     if ui.button("Exit to Desktop").clicked() {
                                         self.gui_state.should_exit = true;
@@ -335,7 +335,7 @@ impl App {
 
                 Some(&GuiElement::MultiplayerMenu) => {
                     egui::Area::new("multiplayer menu".into())
-                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .anchor(Align2::CENTER_CENTER, Vec2::new(0.0, 0.0))
                         .show(&ctx, |ui| {
                             let menu_size = Rect::from_center_size(
                                 ui.available_rect_before_wrap().center(),
@@ -353,10 +353,7 @@ impl App {
                                         if ui.button("Host").clicked() {
                                             let client = reqwest::blocking::Client::new();
                                             let new_lobby_response = client
-                                                .post(format!(
-                                                    "http://{}create_lobby",
-                                                    self.settings.remote_url.clone()
-                                                ))
+                                                .post(format!("http://{}create_lobby", self.settings.remote_url.clone()))
                                                 .json(&self.settings.create_lobby_settings)
                                                 .send();
                                             let new_lobby_response = match new_lobby_response {
@@ -383,13 +380,12 @@ impl App {
                                                 }
                                             };
                                             println!("new lobby id: {}", new_lobby_id);
-                                            // *game = Some(Game::new(
-                                            //     self.settings,
-                                            //     self.settings.create_lobby_settings.clone(),
-                                            //     &self.gui_state.gui_deck,
-                                            //     creation_interface,
-                                            //     Some(RoomId(new_lobby_id)),
-                                            // ));
+                                            self.game = Some(pollster::block_on(Renderer::new(
+                                                self.compilation.take().unwrap(),
+                                                window_size,
+                                                device.clone(),
+                                                queue.clone(),
+                                            )));
                                             self.gui_state.menu_stack.push(GuiElement::LobbyQueue);
                                             self.gui_state.game_just_started = true;
                                         }
@@ -408,7 +404,7 @@ impl App {
                 Some(&GuiElement::LobbyBrowser) => {
                     use egui_extras::{Column, TableBuilder};
                     egui::Area::new("lobby browser".into())
-                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .anchor(Align2::CENTER_CENTER, Vec2::new(0.0, 0.0))
                         .show(&ctx, |ui| {
                             let menu_size = Rect::from_center_size(
                                 ui.available_rect_before_wrap().center(),
@@ -502,17 +498,12 @@ impl App {
                                                                         self.gui_state
                                                                             .menu_stack
                                                                             .clear();
-                                                                        // *game = Some(Game::new(
-                                                                        //     settings,
-                                                                        //     lobby.settings.clone(),
-                                                                        //     &gui_state.gui_deck,
-                                                                        //     creation_interface,
-                                                                        //     Some(
-                                                                        //         lobby
-                                                                        //             .lobby_id
-                                                                        //             .clone(),
-                                                                        //     ),
-                                                                        // ));
+                                                                        self.game = Some(pollster::block_on(Renderer::new(
+                                                                            self.compilation.take().unwrap(),
+                                                                            window_size,
+                                                                            device.clone(),
+                                                                            queue.clone(),
+                                                                        )));
                                                                         self.gui_state.menu_stack.push(
                                                                             GuiElement::LobbyQueue,
                                                                         );
@@ -539,7 +530,7 @@ impl App {
                 }
                 Some(&GuiElement::LobbyQueue) => {
                     egui::Area::new("lobby queue".into())
-                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .anchor(Align2::CENTER_CENTER, Vec2::new(0.0, 0.0))
                         .show(&ctx, |ui| {
                             let menu_size = Rect::from_center_size(
                                 ui.available_rect_before_wrap().center(),
@@ -564,7 +555,7 @@ impl App {
                                         // }
                                         if ui.button("Back").clicked() {
                                             self.gui_state.menu_stack.pop();
-                                            // *game = None;
+                                            self.game = None;
                                         }
                                     });
                                 });
@@ -573,7 +564,7 @@ impl App {
                 }
                 Some(&GuiElement::ModeGui) => {
                     egui::Area::new("mode gui".into())
-                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .anchor(Align2::CENTER_CENTER, Vec2::new(0.0, 0.0))
                         .show(&ctx, |ui| {
                             let menu_size = Rect::from_center_size(
                                 ui.available_rect_before_wrap().center(),
@@ -593,7 +584,7 @@ impl App {
                                         // }
                                         if ui.button("Back").clicked() {
                                             self.gui_state.menu_stack.pop();
-                                            // *game = None;
+                                            self.game = None;
                                         }
                                     });
                                 });
@@ -602,7 +593,7 @@ impl App {
                 }
                 Some(GuiElement::DeckPicker) => {
                     egui::Area::new("deck picker".into())
-                        .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
+                        .anchor(Align2::CENTER_CENTER, Vec2::new(0.0, 0.0))
                         .show(&ctx, |ui| {
                             let menu_size = Rect::from_center_size(
                                 ui.available_rect_before_wrap().center(),
@@ -649,7 +640,9 @@ impl App {
         }
 
         render_data.queue.submit([encoder.finish()]);
-        render_data.state.handle_print_output();
+        if let Some(game) = self.game.as_mut() {
+            game.handle_print_output();
+        }
         surface_texture.present();
     }
 
@@ -671,7 +664,6 @@ impl App {
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let compilation = self.compilation.take().expect("Compilation result is missing");
         #[allow(unused_mut)]
         let mut builder = Window::default_attributes().with_title("Slang Native Playground");
 
@@ -691,7 +683,7 @@ impl ApplicationHandler for App {
         }
 
         let window = Arc::new(event_loop.create_window(builder).unwrap());
-        let future = RenderData::new(window, compilation);
+        let future = RenderData::new(window);
         #[cfg(not(target_arch = "wasm32"))]
         {
             self.render_data = Some(pollster::block_on(future));
@@ -709,16 +701,16 @@ impl ApplicationHandler for App {
             });
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
-        if cfg!(debug_assertions) {
-            let debug_state = pollster::block_on(DebugAppState::new(
-                event_loop,
-                (1360, 768),
-                self.render_data.as_ref().unwrap().state.uniform_components.clone(),
-            ));
-            self.debug_app = Some(debug_state);
-            self.render_data.as_ref().unwrap().window.focus_window();
-        }
+        // #[cfg(not(target_arch = "wasm32"))]
+        // if cfg!(debug_assertions) {
+        //     let debug_state = pollster::block_on(DebugAppState::new(
+        //         event_loop,
+        //         (1360, 768),
+        //         self.render_data.as_ref().unwrap().state.uniform_components.clone(),
+        //     ));
+        //     self.debug_app = Some(debug_state);
+        //     self.render_data.as_ref().unwrap().window.focus_window();
+        // }
     }
 
     fn window_event(
@@ -766,7 +758,9 @@ impl ApplicationHandler for App {
         }
 
         render_data.egui_renderer.handle_input(&render_data.window, &event);
-        render_data.state.process_event(&event);
+        if let Some(game) = self.game.as_mut() {
+            game.process_event(&event);
+        }
     }
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
@@ -783,7 +777,9 @@ impl ApplicationHandler for App {
         #[cfg(not(target_arch = "wasm32"))]
         // Only handle debug window if in debug mode
         if cfg!(debug_assertions) {
-            self.debug_app.as_mut().unwrap().about_to_wait();
+            if let Some(debug_app) = self.debug_app.as_mut() {
+                debug_app.about_to_wait();
+            }
         }
     }
 }
