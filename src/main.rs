@@ -9,11 +9,7 @@ use slang_renderer::Renderer;
 use wgpu::Features;
 use std::{fs, sync::Arc};
 use winit::{
-    application::ApplicationHandler,
-    dpi::PhysicalSize,
-    event::WindowEvent,
-    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
-    window::{Window, WindowId},
+    application::ApplicationHandler, dpi::PhysicalSize, event::{ElementState, KeyEvent, WindowEvent}, event_loop::{ActiveEventLoop, ControlFlow, EventLoop}, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}
 };
 use slang_shader_macros::compile_shader;
 
@@ -265,7 +261,7 @@ impl App {
                                             if ui.button(&preset.name).clicked() {
                                                 self.gui_state.menu_stack.clear();
                                                 self.game = Some(pollster::block_on(Renderer::new(
-                                                    self.compilation.take().unwrap(),
+                                                    self.compilation.clone().unwrap(),
                                                     window_size,
                                                     device.clone(),
                                                     queue.clone(),
@@ -381,7 +377,7 @@ impl App {
                                             };
                                             println!("new lobby id: {}", new_lobby_id);
                                             self.game = Some(pollster::block_on(Renderer::new(
-                                                self.compilation.take().unwrap(),
+                                                self.compilation.clone().unwrap(),
                                                 window_size,
                                                 device.clone(),
                                                 queue.clone(),
@@ -499,7 +495,7 @@ impl App {
                                                                             .menu_stack
                                                                             .clear();
                                                                         self.game = Some(pollster::block_on(Renderer::new(
-                                                                            self.compilation.take().unwrap(),
+                                                                            self.compilation.clone().unwrap(),
                                                                             window_size,
                                                                             device.clone(),
                                                                             queue.clone(),
@@ -626,7 +622,94 @@ impl App {
                             });
                         });
                 }
-                None => {}
+                None => {
+                    egui::Area::new("crosshair".into())
+                        .anchor(Align2::CENTER_CENTER, (0.0, 0.0))
+                        .show(&ctx, |ui| {
+                            let center = ui.available_rect_before_wrap().center();
+
+                            // if spectate_player.hitmarker.0 + spectate_player.hitmarker.1 > 0.0 {
+                            //     let hitmarker_size = 0.5 * spectate_player.hitmarker.0;
+                            //     let head_hitmarker_size = 0.5
+                            //         * (spectate_player.hitmarker.0
+                            //             + spectate_player.hitmarker.1);
+                            //     let hitmarker_thickness = 1.5;
+                            //     let head_hitmarker_color = Color32::RED;
+                            //     let hitmarker_color = Color32::from_additive_luminance(255);
+                            //     ui.painter().add(epaint::Shape::line_segment(
+                            //         [
+                            //             center
+                            //                 + vec2(-head_hitmarker_size, -head_hitmarker_size),
+                            //             center + vec2(head_hitmarker_size, head_hitmarker_size),
+                            //         ],
+                            //         Stroke::new(hitmarker_thickness, head_hitmarker_color),
+                            //     ));
+                            //     ui.painter().add(epaint::Shape::line_segment(
+                            //         [
+                            //             center
+                            //                 + vec2(-head_hitmarker_size, head_hitmarker_size),
+                            //             center
+                            //                 + vec2(head_hitmarker_size, -head_hitmarker_size),
+                            //         ],
+                            //         Stroke::new(hitmarker_thickness, head_hitmarker_color),
+                            //     ));
+                            //     ui.painter().add(epaint::Shape::line_segment(
+                            //         [
+                            //             center + vec2(-hitmarker_size, -hitmarker_size),
+                            //             center + vec2(hitmarker_size, hitmarker_size),
+                            //         ],
+                            //         Stroke::new(hitmarker_thickness, hitmarker_color),
+                            //     ));
+                            //     ui.painter().add(epaint::Shape::line_segment(
+                            //         [
+                            //             center + vec2(-hitmarker_size, hitmarker_size),
+                            //             center + vec2(hitmarker_size, -hitmarker_size),
+                            //         ],
+                            //         Stroke::new(hitmarker_thickness, hitmarker_color),
+                            //     ));
+                            // }
+
+                            let thickness = 1.0;
+                            let color = Color32::from_additive_luminance(255);
+                            let crosshair_size = 10.0;
+
+                            ui.painter().add(epaint::Shape::line_segment(
+                                [
+                                    center + vec2(-crosshair_size, 0.0),
+                                    center + vec2(crosshair_size, 0.0),
+                                ],
+                                Stroke::new(thickness, color),
+                            ));
+                            ui.painter().add(epaint::Shape::line_segment(
+                                [
+                                    center + vec2(0.0, -crosshair_size),
+                                    center + vec2(0.0, crosshair_size),
+                                ],
+                                Stroke::new(thickness, color),
+                            ));
+
+                            // //draw hurtmarkers
+                            // for (hurt_direction, hurt_size, remaining_marker_duration) in
+                            //     spectate_player.hurtmarkers.iter()
+                            // {
+                            //     let hurtmarker_color = Color32::RED
+                            //         .gamma_multiply(remaining_marker_duration / 1.5);
+                            //     let hurtmarker_size = 1.2 * hurt_size.sqrt();
+                            //     let transformed_hurt_angle = spectate_player.facing[0]
+                            //         - (-hurt_direction.z).atan2(hurt_direction.x);
+                            //     let hurtmarker_center = center
+                            //         + vec2(
+                            //             transformed_hurt_angle.cos(),
+                            //             transformed_hurt_angle.sin(),
+                            //         ) * 50.0;
+                            //     ui.painter().circle_filled(
+                            //         hurtmarker_center,
+                            //         hurtmarker_size,
+                            //         hurtmarker_color,
+                            //     );
+                            // }
+                        });
+                }
             }
 
             render_data.egui_renderer.end_frame_and_draw(
@@ -753,6 +836,49 @@ impl ApplicationHandler for App {
         match event {
             WindowEvent::Resized(size) => {
                 configure_surface(&render_data.surface, &render_data.device, size, self.surface_format);
+            }
+            WindowEvent::KeyboardInput {
+                    event:
+                        KeyEvent {
+                            state,
+                            physical_key,
+                            ..
+                        },
+                    ..
+                } => {
+                
+                match physical_key {
+                    PhysicalKey::Code(KeyCode::Escape) => {
+                        if state == ElementState::Released {
+                            if self.gui_state.menu_stack.len() > 0
+                                && !self.gui_state
+                                    .menu_stack
+                                    .last()
+                                    .is_some_and(|gui| *gui == GuiElement::MainMenu)
+                            {
+                                let exited_ui = self.gui_state.menu_stack.pop().unwrap();
+                                // match exited_ui {
+                                //     GuiElement::CardEditor => {
+                                //         self.gui_state.render_deck_idx = 0;
+                                //         self.gui_state.render_deck = self.gui_state.gui_deck.clone();
+                                //         let config = ron::ser::PrettyConfig::default();
+                                //         let export = ron::ser::to_string_pretty(
+                                //             &self.gui_state.gui_deck,
+                                //             config,
+                                //         )
+                                //         .unwrap();
+                                //         fs::write(&self.settings.card_file, export)
+                                //             .expect("failed to write card file");
+                                //     }
+                                //     _ => (),
+                                // }
+                            } else {
+                                self.gui_state.menu_stack.push(GuiElement::EscMenu);
+                            }
+                        }
+                    }
+                    _ => {}
+                }
             }
             _ => (),
         }
