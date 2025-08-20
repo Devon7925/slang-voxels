@@ -43,6 +43,20 @@ RWStructuredBuffer<Atomic<uint>> updatedChunks;
 [playground::ZEROS(8 * MAX_CHUNK_UPDATES)]
 RWStructuredBuffer<int3> chunkUpdates;
 
+struct PlayerInput
+{
+    float forward;
+    float backward;
+    float left;
+    float right;
+    float jump;
+    float crouch;
+    float interact;
+}
+
+[playground::EXTERNAL(1)]
+StructuredBuffer<PlayerInput> playerInput;
+
 struct GameData
 {
     float4 prevMouse;

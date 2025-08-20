@@ -1,17 +1,21 @@
-mod shared;
 mod egui_tools;
-mod settings_manager;
 mod gui;
 mod lobby_browser;
+mod settings_manager;
+mod shared;
 
 use slang_playground_compiler::CompilationResult;
 use slang_renderer::Renderer;
-use wgpu::Features;
 use std::{fs, sync::Arc};
+use wgpu::Features;
 use winit::{
-    application::ApplicationHandler, dpi::PhysicalSize, event::{ElementState, KeyEvent, WindowEvent}, event_loop::{ActiveEventLoop, ControlFlow, EventLoop}, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}
+    application::ApplicationHandler,
+    dpi::PhysicalSize,
+    event::{ElementState, KeyEvent, WindowEvent},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+    keyboard::{KeyCode, PhysicalKey},
+    window::{Window, WindowId},
 };
-use slang_shader_macros::compile_shader;
 
 #[cfg(target_family = "wasm")]
 use std::panic;
@@ -22,7 +26,11 @@ extern crate console_error_panic_hook;
 #[cfg(not(target_arch = "wasm32"))]
 use slang_debug_app::DebugAppState;
 
-use crate::{gui::{horizontal_centerer, vertical_centerer, GuiElement, GuiState, PaletteState}, lobby_browser::LobbyBrowser, settings_manager::Settings};
+use crate::{
+    gui::{GuiElement, GuiState, PaletteState, horizontal_centerer, vertical_centerer},
+    lobby_browser::LobbyBrowser,
+    settings_manager::{Control, Settings},
+};
 
 struct RenderData {
     pub window: Arc<Window>,
@@ -53,6 +61,10 @@ impl RenderData {
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 required_features: Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
+                required_limits: wgpu::Limits {
+                    max_storage_buffers_per_shader_stage: 9, // this should be fixed later for compat
+                    ..wgpu::Limits::default()
+                },
                 ..Default::default()
             })
             .await
@@ -78,7 +90,12 @@ impl RenderData {
 }
 
 // Surface configuration is now handled externally if needed
-fn configure_surface(surface: &wgpu::Surface, device: &wgpu::Device, size: PhysicalSize<u32>, surface_format: wgpu::TextureFormat) {
+fn configure_surface(
+    surface: &wgpu::Surface,
+    device: &wgpu::Device,
+    size: PhysicalSize<u32>,
+    surface_format: wgpu::TextureFormat,
+) {
     let surface_config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: surface_format,
@@ -93,8 +110,7 @@ fn configure_surface(surface: &wgpu::Surface, device: &wgpu::Device, size: Physi
             wgpu::PresentMode::Immediate
         },
     };
-    surface
-        .configure(device, &surface_config);
+    surface.configure(device, &surface_config);
 }
 
 const SETTINGS_FILE: &str = "settings.yaml";
@@ -102,6 +118,7 @@ const SETTINGS_FILE: &str = "settings.yaml";
 struct App {
     render_data: Option<RenderData>,
     game: Option<Renderer>,
+    player_input: playground_module::PlayerInput,
     #[cfg(target_arch = "wasm32")]
     state_receiver: Option<futures::channel::oneshot::Receiver<RenderData>>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -133,6 +150,15 @@ impl App {
         Self {
             render_data: None,
             game: None,
+            player_input: playground_module::PlayerInput {
+                forward: 0.0,
+                backward: 0.0,
+                left: 0.0,
+                right: 0.0,
+                jump: 0.0,
+                crouch: 0.0,
+                interact: 0.0,
+            },
             #[cfg(target_arch = "wasm32")]
             state_receiver: None,
             #[cfg(not(target_arch = "wasm32"))]
@@ -148,8 +174,9 @@ impl App {
         let Some(render_data) = self.render_data.as_mut() else {
             return;
         };
-        
-        let surface_texture = render_data.surface
+
+        let surface_texture = render_data
+            .surface
             .get_current_texture()
             .expect("failed to acquire next swapchain texture");
         let texture_view = surface_texture
@@ -163,6 +190,7 @@ impl App {
             .create_command_encoder(&Default::default());
 
         if let Some(game) = self.game.as_mut() {
+            playground_module::set_player_input(game, self.player_input);
             game.begin_frame();
             game.run_compute_passes(&mut encoder);
             game.run_draw_passes(&mut encoder, &texture_view);
@@ -172,7 +200,10 @@ impl App {
             use egui::*;
 
             let screen_descriptor = egui_wgpu::ScreenDescriptor {
-                size_in_pixels: [surface_texture.texture.width(), surface_texture.texture.height()],
+                size_in_pixels: [
+                    surface_texture.texture.width(),
+                    surface_texture.texture.height(),
+                ],
                 pixels_per_point: render_data.window.scale_factor() as f32,
             };
 
@@ -202,10 +233,14 @@ impl App {
                                 vertical_centerer(ui, |ui| {
                                     ui.vertical_centered(|ui| {
                                         if ui.button("Singleplayer").clicked() {
-                                            self.gui_state.menu_stack.push(GuiElement::SingleplayerMenu);
+                                            self.gui_state
+                                                .menu_stack
+                                                .push(GuiElement::SingleplayerMenu);
                                         }
                                         if ui.button("Multiplayer").clicked() {
-                                            self.gui_state.menu_stack.push(GuiElement::MultiplayerMenu);
+                                            self.gui_state
+                                                .menu_stack
+                                                .push(GuiElement::MultiplayerMenu);
                                         }
                                         if ui.button("Deck Picker").clicked() {
                                             self.gui_state.menu_stack.push(GuiElement::DeckPicker);
@@ -260,12 +295,13 @@ impl App {
                                         for preset in self.settings.preset_settings.iter() {
                                             if ui.button(&preset.name).clicked() {
                                                 self.gui_state.menu_stack.clear();
-                                                self.game = Some(pollster::block_on(Renderer::new(
-                                                    self.compilation.clone().unwrap(),
-                                                    window_size,
-                                                    device.clone(),
-                                                    queue.clone(),
-                                                )));
+                                                self.game =
+                                                    Some(pollster::block_on(Renderer::new(
+                                                        self.compilation.clone().unwrap(),
+                                                        window_size,
+                                                        device.clone(),
+                                                        queue.clone(),
+                                                    )));
                                                 self.gui_state.game_just_started = true;
                                             }
                                         }
@@ -349,7 +385,10 @@ impl App {
                                         if ui.button("Host").clicked() {
                                             let client = reqwest::blocking::Client::new();
                                             let new_lobby_response = client
-                                                .post(format!("http://{}create_lobby", self.settings.remote_url.clone()))
+                                                .post(format!(
+                                                    "http://{}create_lobby",
+                                                    self.settings.remote_url.clone()
+                                                ))
                                                 .json(&self.settings.create_lobby_settings)
                                                 .send();
                                             let new_lobby_response = match new_lobby_response {
@@ -387,7 +426,9 @@ impl App {
                                         }
                                         if ui.button("Join").clicked() {
                                             self.gui_state.lobby_browser.update(&self.settings);
-                                            self.gui_state.menu_stack.push(GuiElement::LobbyBrowser);
+                                            self.gui_state
+                                                .menu_stack
+                                                .push(GuiElement::LobbyBrowser);
                                         }
                                         if ui.button("Back").clicked() {
                                             self.gui_state.menu_stack.pop();
@@ -835,23 +876,49 @@ impl ApplicationHandler for App {
         };
         match event {
             WindowEvent::Resized(size) => {
-                configure_surface(&render_data.surface, &render_data.device, size, self.surface_format);
+                configure_surface(
+                    &render_data.surface,
+                    &render_data.device,
+                    size,
+                    self.surface_format,
+                );
             }
             WindowEvent::KeyboardInput {
-                    event:
-                        KeyEvent {
-                            state,
-                            physical_key,
-                            ..
-                        },
-                    ..
-                } => {
-                
+                event:
+                    KeyEvent {
+                        state,
+                        physical_key,
+                        ..
+                    },
+                ..
+            } => {
+                let state_value = if state == ElementState::Pressed {
+                    1.0
+                } else {
+                    0.0
+                };
+                macro_rules! key_match {
+                    ($property:ident) => {
+                        if let Control::Key(key_code) = self.settings.movement_controls.$property
+                            && key_code == physical_key
+                        {
+                            self.player_input.$property = state_value;
+                        }
+                    }
+                }
+                key_match!(jump);
+                key_match!(crouch);
+                key_match!(right);
+                key_match!(left);
+                key_match!(forward);
+                key_match!(backward);
+
                 match physical_key {
                     PhysicalKey::Code(KeyCode::Escape) => {
                         if state == ElementState::Released {
                             if self.gui_state.menu_stack.len() > 0
-                                && !self.gui_state
+                                && !self
+                                    .gui_state
                                     .menu_stack
                                     .last()
                                     .is_some_and(|gui| *gui == GuiElement::MainMenu)
@@ -883,7 +950,9 @@ impl ApplicationHandler for App {
             _ => (),
         }
 
-        render_data.egui_renderer.handle_input(&render_data.window, &event);
+        render_data
+            .egui_renderer
+            .handle_input(&render_data.window, &event);
         if let Some(game) = self.game.as_mut() {
             game.process_event(&event);
         }
@@ -920,7 +989,9 @@ mod wasm_workaround {
 fn main() {
     // https://github.com/rustwasm/wasm-bindgen/issues/4446
     #[cfg(target_family = "wasm")]
-    unsafe { wasm_workaround::__wasm_call_ctors()};
+    unsafe {
+        wasm_workaround::__wasm_call_ctors()
+    };
 
     #[cfg(debug_assertions)]
     #[cfg(target_family = "wasm")]
@@ -946,7 +1017,10 @@ fn main() {
     // the background.
     // event_loop.set_control_flow(ControlFlow::Wait);
 
-    let compilation: CompilationResult = compile_shader!("user.slang", ["shaders"]);
-    let mut app = App::new(compilation);
+    let mut app = App::new(playground_module::COMPILATION_RESULT.clone());
     event_loop.run_app(&mut app).unwrap();
+}
+
+mod playground_module {
+    slang_shader_macros::shader_module!("user.slang", ["shaders"]);
 }

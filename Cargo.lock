@@ -463,9 +463,9 @@ dependencies = [
 
 [[package]]
 name = "cfg-if"
-version = "1.0.1"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9555578bc9e57714c812a1f84e4fc5b4d21fcb063490c624de019f7464c91268"
+checksum = "2fd1289c04a9ea8cb22300a459a72a385d7c73d3259e2ed7dcb2af674838cfa9"
 
 [[package]]
 name = "cfg_aliases"
@@ -1362,19 +1362,21 @@ checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
 
 [[package]]
 name = "hyper"
-version = "1.6.0"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc2b571658e38e0c01b1fdca3bbbe93c00d3d71693ff2770043f8c29bc7d6f80"
+checksum = "eb3aa54a13a0dfe7fbe3a59e0c76093041720fdc77b110cc0fc260fafb4dc51e"
 dependencies = [
+ "atomic-waker",
  "bytes",
  "futures-channel",
- "futures-util",
+ "futures-core",
  "h2",
  "http",
  "http-body",
  "httparse",
  "itoa",
  "pin-project-lite",
+ "pin-utils",
  "smallvec",
  "tokio",
  "want",
@@ -2672,9 +2674,9 @@ checksum = "e8cf8e6a8aa66ce33f63993ffc4ea4271eb5b0530a9002db8455ea6050c77bfa"
 
 [[package]]
 name = "prettyplease"
-version = "0.2.36"
+version = "0.2.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff24dfcda44452b9816fff4cd4227e1bb73ff5a2f1bc1105aa92fb8565ce44d2"
+checksum = "479ca8adacdd7ce8f1fb39ce9ecccbfe93a3f1344b3d0d97f20bc0196208f62b"
 dependencies = [
  "proc-macro2",
  "syn",
@@ -3202,9 +3204,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.142"
+version = "1.0.143"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "030fedb782600dcbd6f02d479bf0d817ac3bb40d644745b769d6a96bc3afc5a7"
+checksum = "d401abef1d108fbd9cbaebc3e46611f4b1021f714a0597a71f41ee463f5f4a5a"
 dependencies = [
  "itoa",
  "memchr",
@@ -3286,7 +3288,7 @@ checksum = "7a2ae44ef20feb57a68b23d846850f861394c2e02dc425a50098ae8c90267589"
 [[package]]
 name = "slang"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-rs#c5c157a97eed401318e67fc830be31f25e570205"
+source = "git+https://github.com/Devon7925/slang-rs#684515bd09e525a98d5cb841924cd5ff994b40db"
 dependencies = [
  "libc",
  "paste",
@@ -3297,7 +3299,7 @@ dependencies = [
 [[package]]
 name = "slang-debug-app"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#fb6f252b0228dd706a10895bb6d1d60e3e99f886"
+source = "git+https://github.com/Devon7925/slang-native-playground#279bdc2f38c590f557d87765e1c3989985788d5f"
 dependencies = [
  "egui",
  "egui-wgpu",
@@ -3313,7 +3315,7 @@ dependencies = [
 [[package]]
 name = "slang-playground-compiler"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#fb6f252b0228dd706a10895bb6d1d60e3e99f886"
+source = "git+https://github.com/Devon7925/slang-native-playground#279bdc2f38c590f557d87765e1c3989985788d5f"
 dependencies = [
  "bytemuck",
  "dyn-clone",
@@ -3336,15 +3338,16 @@ dependencies = [
 [[package]]
 name = "slang-reflector"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-reflector.git#6db8e1ed8f9c0e90c00e8135d24672b6f8dab02b"
+source = "git+https://github.com/Devon7925/slang-reflector.git#0a5225eedd324558a12ea43a81adc2fbf59f8afe"
 dependencies = [
+ "serde",
  "slang",
 ]
 
 [[package]]
 name = "slang-renderer"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#fb6f252b0228dd706a10895bb6d1d60e3e99f886"
+source = "git+https://github.com/Devon7925/slang-native-playground#279bdc2f38c590f557d87765e1c3989985788d5f"
 dependencies = [
  "bytemuck",
  "console_error_panic_hook",
@@ -3364,15 +3367,17 @@ dependencies = [
 [[package]]
 name = "slang-shader-macros"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#fb6f252b0228dd706a10895bb6d1d60e3e99f886"
+source = "git+https://github.com/Devon7925/slang-native-playground#279bdc2f38c590f557d87765e1c3989985788d5f"
 dependencies = [
  "base64",
+ "heck",
  "proc-macro2",
  "quote",
  "ron",
  "serde",
  "serde_json",
  "slang-playground-compiler",
+ "slang-renderer",
  "syn",
  "wgpu",
 ]
@@ -3380,10 +3385,11 @@ dependencies = [
 [[package]]
 name = "slang-sys"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-rs#c5c157a97eed401318e67fc830be31f25e570205"
+source = "git+https://github.com/Devon7925/slang-rs#684515bd09e525a98d5cb841924cd5ff994b40db"
 dependencies = [
  "bindgen",
  "paste",
+ "serde",
 ]
 
 [[package]]
@@ -3404,6 +3410,7 @@ dependencies = [
  "getrandom 0.3.3",
  "itertools 0.14.0",
  "js-sys",
+ "once_cell",
  "pollster",
  "regex",
  "reqwest",
@@ -4421,11 +4428,11 @@ dependencies = [
 
 [[package]]
 name = "winapi-util"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
+checksum = "0978bf7171b3d90bac376700cb56d606feb40f251a475a5d6634613564460b22"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
