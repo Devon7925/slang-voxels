@@ -383,14 +383,16 @@ impl App {
                                 vertical_centerer(ui, |ui| {
                                     ui.vertical_centered(|ui| {
                                         if ui.button("Host").clicked() {
-                                            let client = reqwest::blocking::Client::new();
-                                            let new_lobby_response = client
-                                                .post(format!(
-                                                    "http://{}create_lobby",
-                                                    self.settings.remote_url.clone()
-                                                ))
-                                                .json(&self.settings.create_lobby_settings)
-                                                .send();
+                                            let client = reqwest::Client::new();
+                                            let new_lobby_response = pollster::block_on(
+                                                client
+                                                    .post(format!(
+                                                        "http://{}create_lobby",
+                                                        self.settings.remote_url.clone()
+                                                    ))
+                                                    .json(&self.settings.create_lobby_settings)
+                                                    .send(),
+                                            );
                                             let new_lobby_response = match new_lobby_response {
                                                 Ok(new_lobby_response) => new_lobby_response,
                                                 Err(e) => {
@@ -402,7 +404,7 @@ impl App {
                                                     return;
                                                 }
                                             };
-                                            let new_lobby_id = new_lobby_response.json::<String>();
+                                            let new_lobby_id = pollster::block_on(new_lobby_response.json::<String>());
                                             let new_lobby_id = match new_lobby_id {
                                                 Ok(new_lobby_id) => new_lobby_id,
                                                 Err(e) => {
@@ -904,7 +906,7 @@ impl ApplicationHandler for App {
                         {
                             self.player_input.$property = state_value;
                         }
-                    }
+                    };
                 }
                 key_match!(jump);
                 key_match!(crouch);
