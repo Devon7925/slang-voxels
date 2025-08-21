@@ -1,10 +1,9 @@
 use std::{
     collections::VecDeque,
-    ops::{Add, Mul, Sub},
 };
 
 use egui::{
-    self, emath::{self, Numeric}, epaint::{self, PathShape, PathStroke}, pos2, text::LayoutJob, vec2, Align2, Color32, CornerRadius, CursorIcon, DragValue, FontId, Id, InnerResponse, Label, LayerId, Layout, Order, Pos2, Rect, Rgba, RichText, ScrollArea, Sense, Shape, Stroke, TextFormat, TextStyle, Ui, Vec2
+    self, emath::{self, Numeric, TSTransform}, epaint::{self, PathShape, PathStroke, Rounding}, pos2, text::LayoutJob, vec2, Align2, Color32, CornerRadius, CursorIcon, DragValue, FontId, Id, InnerResponse, Label, LayerId, Layout, Order, Pos2, Rect, Rgba, RichText, ScrollArea, Sense, Shape, Stroke, TextFormat, TextStyle, Ui, Vec2
 };
 use itertools::Itertools;
 
@@ -70,7 +69,7 @@ pub struct GuiState {
 pub fn vertical_centerer(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
     ui.vertical(|ui| {
         let id = ui.id().with("_v_centerer");
-        let last_height: Option<f32> = ui.memory_mut(|mem| mem.data.get_temp(id));
+    let last_height: Option<f32> = ui.memory_mut(|mem| mem.data.get_temp::<f32>(id));
         if let Some(last_height) = last_height {
             ui.add_space((ui.available_height() - last_height) / 2.0);
         }
@@ -94,7 +93,7 @@ pub fn vertical_centerer(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
 pub fn horizontal_centerer(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
     ui.horizontal(|ui| {
         let id = ui.id().with("_h_centerer");
-        let last_width: Option<f32> = ui.memory_mut(|mem| mem.data.get_temp(id));
+    let last_width: Option<f32> = ui.memory_mut(|mem| mem.data.get_temp::<f32>(id));
         if let Some(last_width) = last_width {
             ui.add_space((ui.available_width() - last_width) / 2.0);
         }
@@ -115,51 +114,103 @@ pub fn horizontal_centerer(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
     });
 }
 
-const TAU: f32 = std::f32::consts::TAU;
-pub fn lerp<T>(start: T, end: T, t: f32) -> T
-where
-    T: Add<T, Output = T> + Sub<T, Output = T> + Mul<f32, Output = T> + Copy,
-{
-    (end - start) * t.clamp(0.0, 1.0) + start
+// pub fn lerp<T>(start: T, end: T, t: f32) -> T
+// where
+//     T: Add<T, Output = T> + Sub<T, Output = T> + Mul<f32, Output = T> + Copy,
+// {
+//     (end - start) * t.clamp(0.0, 1.0) + start
+// }
+
+// fn get_arc_points(
+//     start: f32,
+//     center: Pos2,
+//     radius: f32,
+//     value: f32,
+//     max_arc_distance: f32,
+// ) -> Vec<Pos2> {
+//     let start_turns: f32 = start;
+//     let end_turns = start_turns + value;
+
+//     let points = (value.abs() / max_arc_distance).ceil() as usize;
+//     let points = points.max(1);
+//     (0..=points)
+//         .map(|i| {
+//             let t = i as f32 / (points - 1) as f32;
+//             let angle = lerp(start_turns * TAU, end_turns * TAU, t);
+//             let x = radius * angle.cos();
+//             let y = -radius * angle.sin();
+//             pos2(x, y) + center.to_vec2()
+//         })
+//         .collect()
+// }
+
+// fn get_arc_shape(
+//     start: f32,
+//     center: Pos2,
+//     radius: f32,
+//     value: f32,
+//     max_arc_distance: f32,
+//     stroke: PathStroke,
+// ) -> Shape {
+//     Shape::Path(PathShape {
+//         points: get_arc_points(start, center, radius, value, max_arc_distance),
+//         closed: false,
+//         fill: Color32::TRANSPARENT,
+//         stroke,
+//     })
+// }
+
+// Helper approximations for modern egui drag checks. The old API exposed
+// Memory::is_being_dragged/is_anything_being_dragged which changed; here we
+// approximate by checking stored temp data and pointer state. This keeps the
+// rest of the GUI logic similar while avoiding private Memory APIs.
+fn is_item_being_dragged(ui: &Ui, id: Id) -> bool {
+    // We previously stored a temp rect for draggable items each frame. If that
+    // temp exists and the pointer is down, treat the item as being dragged.
+    let has_prev: bool = ui.data(|d| d.get_temp::<Rect>(id)).is_some();
+    let pointer_down = ui.input(|i| i.pointer.primary_down());
+    has_prev && pointer_down
 }
 
-fn get_arc_points(
-    start: f32,
-    center: Pos2,
-    radius: f32,
-    value: f32,
-    max_arc_distance: f32,
-) -> Vec<Pos2> {
-    let start_turns: f32 = start;
-    let end_turns = start_turns + value;
-
-    let points = (value.abs() / max_arc_distance).ceil() as usize;
-    let points = points.max(1);
-    (0..=points)
-        .map(|i| {
-            let t = i as f32 / (points - 1) as f32;
-            let angle = lerp(start_turns * TAU, end_turns * TAU, t);
-            let x = radius * angle.cos();
-            let y = -radius * angle.sin();
-            pos2(x, y) + center.to_vec2()
-        })
-        .collect()
+fn is_anything_being_dragged(ui: &Ui) -> bool {
+    // Approximate "anything being dragged" by whether the pointer is down.
+    // This is a simplification but matches the UI's needs (visual feedback
+    // while a drag-like interaction is happening).
+    ui.input(|i| i.pointer.primary_down())
 }
 
-fn get_arc_shape(
-    start: f32,
-    center: Pos2,
-    radius: f32,
-    value: f32,
-    max_arc_distance: f32,
-    stroke: PathStroke,
-) -> Shape {
-    Shape::Path(PathShape {
-        points: get_arc_points(start, center, radius, value, max_arc_distance),
-        closed: false,
-        fill: Color32::TRANSPARENT,
-        stroke,
-    })
+// Map egui key to the project's KeyCode. We only need a subset used by the
+// UI keybind editor; map common printable keys and fallback to a best-effort
+// mapping for others.
+fn translate_egui_key_code(key: egui::Key) -> winit::keyboard::KeyCode {
+    use egui::Key;
+    use winit::keyboard::KeyCode;
+    match key {
+        Key::Escape => KeyCode::Escape,
+        Key::Tab => KeyCode::Tab,
+        Key::Enter => KeyCode::Enter,
+        Key::Space => KeyCode::Space,
+        Key::Backspace => KeyCode::Backspace,
+    Key::ArrowDown => KeyCode::ArrowDown,
+    Key::ArrowLeft => KeyCode::ArrowLeft,
+    Key::ArrowRight => KeyCode::ArrowRight,
+    Key::ArrowUp => KeyCode::ArrowUp,
+    // For keys we don't explicitly map, return Escape as a harmless
+    // default so the function remains total. A better mapping could be
+    // added later if needed.
+    _ => KeyCode::Escape,
+    }
+}
+
+fn translate_egui_pointer_button(button: egui::PointerButton) -> winit::event::MouseButton {
+    use egui::PointerButton;
+    use winit::event::MouseButton;
+    match button {
+        PointerButton::Primary => MouseButton::Left,
+        PointerButton::Secondary => MouseButton::Right,
+        PointerButton::Middle => MouseButton::Middle,
+        _ => MouseButton::Other(0),
+    }
 }
 
 // fn cooldown_ui(ui: &mut egui::Ui, ability: &PlayerAbility, ability_idx: usize) -> egui::Response {
@@ -233,12 +284,12 @@ fn get_arc_shape(
 //     move |ui: &mut egui::Ui| cooldown_ui(ui, ability, ability_idx)
 // }
 
-pub fn drag_source(ui: &mut Ui, id: Id, dragable: bool, body: impl FnOnce(&mut Ui)) {
-    let is_being_dragged = ui.memory(|mem| mem.is_being_dragged(id));
+pub fn drag_source(ui: &mut Ui, id: Id, dragable: bool, mut body: impl FnMut(&mut Ui)) {
+    let is_being_dragged = is_item_being_dragged(ui, id);
 
     if !is_being_dragged || !dragable {
         //load from previous frame
-        let prev_frame_area: Option<Rect> = ui.data(|d| d.get_temp(id));
+    let prev_frame_area: Option<Rect> = ui.data(|d| d.get_temp::<Rect>(id));
         let mut size = vec2(0.0, 0.0);
         if let Some(area) = prev_frame_area {
             if dragable {
@@ -253,26 +304,26 @@ pub fn drag_source(ui: &mut Ui, id: Id, dragable: bool, body: impl FnOnce(&mut U
         if ui.available_size_before_wrap().x < size.x {
             ui.end_row();
         }
-        let response = ui.scope(body).response;
+    let response = ui.scope(|ui| body(ui)).response;
         //store for next frame
         ui.data_mut(|d| d.insert_temp(id, response.rect.shrink(CARD_UI_SPACING)));
     } else {
         ui.ctx().set_cursor_icon(CursorIcon::Grabbing);
 
-        // Paint the body to a new layer:
-        let layer_id = LayerId::new(Order::Tooltip, id);
-        let response = ui.with_layer_id(layer_id, body).response;
-
-        // Now we move the visuals of the body to where the mouse is.
-        // Normally you need to decide a location for a widget first,
-        // because otherwise that widget cannot interact with the mouse.
-        // However, a dragged component cannot be interacted with anyway
-        // (anything with `Order::Tooltip` always gets an empty [`Response`])
-        // So this is fine!
-
+        // Use the previous frame's stored rect to size and position the
+        // floating drag preview. We stored the widget rect in ui.data in the
+        // non-dragging branch, so it should be available here.
         if let Some(pointer_pos) = ui.ctx().pointer_interact_pos() {
-            let delta = pointer_pos - response.rect.center();
-            ui.ctx().translate_layer(layer_id, delta);
+            if let Some(prev_area) = ui.data(|d| d.get_temp::<Rect>(id)) {
+                let area_id = format!("drag_area_{:?}", id);
+                egui::Area::new(area_id.into())
+                    .order(Order::Tooltip)
+                    .fixed_pos(pointer_pos - prev_area.center().to_vec2())
+                    .show(ui.ctx(), |ui| {
+                        ui.set_min_size(prev_area.size());
+                        (body)(ui);
+                    });
+            }
         }
     }
 }
@@ -290,17 +341,29 @@ pub fn drop_target<R>(
     can_accept_what_is_being_dragged: bool,
     body: impl FnOnce(&mut Ui) -> R,
 ) -> InnerResponse<R> {
-    let is_being_dragged = ui.memory(|mem| mem.is_anything_being_dragged());
+    let is_being_dragged = is_anything_being_dragged(ui);
 
     let margin = egui::Vec2::splat(4.0);
 
     let outer_rect_bounds = ui.available_rect_before_wrap();
     let inner_rect = outer_rect_bounds.shrink2(margin);
     let where_to_put_background = ui.painter().add(Shape::Noop);
-    let mut content_ui = ui.child_ui(inner_rect, *ui.layout());
-    let ret = body(&mut content_ui);
-    let outer_rect = Rect::from_min_max(outer_rect_bounds.min, content_ui.min_rect().max + margin);
-    let (rect, response) = ui.allocate_at_least(outer_rect.size(), Sense::hover());
+    // Modern egui: allocate a child UI at the inner rect with the same layout.
+    // allocate_ui_at_rect now takes a closure; run the body inside that closure
+    // and capture both the result and the child's min_rect so we can compute
+    // the outer rect afterwards.
+    let inner = ui.allocate_ui_at_rect(inner_rect, |content_ui| {
+        let r = body(content_ui);
+        (r, content_ui.min_rect())
+    });
+    let (ret, child_min_rect) = inner.inner;
+    // Compute the background rect using the child's absolute min/max and expand
+    // it by the margin. Using layout allocation (allocate_at_least) can place
+    // the background in a different location than the child UI; instead we
+    // draw directly where the child actually laid out and interact with that
+    // absolute rect so the hover detection matches the visual.
+    let bg_rect = Rect::from_min_max(child_min_rect.min - margin, child_min_rect.max + margin);
+    let response = ui.interact(bg_rect, ui.id().with("_drop_target"), Sense::hover());
 
     let style = if is_being_dragged && can_accept_what_is_being_dragged && response.hovered() {
         ui.visuals().widgets.active
@@ -315,10 +378,17 @@ pub fn drop_target<R>(
         stroke.color = ui.visuals().gray_out(stroke.color);
     }
 
+    // Use rect_filled and rect_stroke to build the background instead of the
+    // older RectShape::new signature which changed in epaint.
     ui.painter().set(
         where_to_put_background,
-        epaint::RectShape::new(rect, style.rounding, fill_color, stroke),
+        epaint::RectShape::filled(bg_rect, CornerRadius::from(CARD_UI_ROUNDING), fill_color),
     );
+    // ui.painter().add(epaint::PathShape::convex_polygon(
+    //     vec![bg_rect.left_top(), bg_rect.right_top(), bg_rect.right_bottom(), bg_rect.left_bottom()],
+    //     Color32::TRANSPARENT,
+    //     stroke,
+    // ));
 
     InnerResponse::new(ret, response)
 }
@@ -382,8 +452,8 @@ impl DrawableCard for Cooldown {
             modifiers,
             cooldown_value,
         } = self;
-        ui.visuals_mut().widgets.active.rounding = Rounding::from(CARD_UI_ROUNDING);
-        ui.visuals_mut().widgets.inactive.rounding = Rounding::from(CARD_UI_ROUNDING);
+    ui.visuals_mut().widgets.active.corner_radius = CornerRadius::from(CARD_UI_ROUNDING);
+    ui.visuals_mut().widgets.inactive.corner_radius = CornerRadius::from(CARD_UI_ROUNDING);
         ui.visuals_mut().override_text_color = Some(Color32::WHITE);
         ui.visuals_mut().widgets.inactive.bg_stroke =
             Stroke::new(0.5, Color32::from_rgb(255, 0, 255));
@@ -435,7 +505,7 @@ impl DrawableCard for Cooldown {
                 for (modifier_idx, _modifier) in modifiers.iter().enumerate() {
                     path.push_back(modifier_idx as u32);
                     let item_id = egui::Id::new(ID_SOURCE).with(path.clone());
-                    if source_path.is_none() && ui.memory(|mem| mem.is_being_dragged(item_id)) {
+                    if source_path.is_none() && is_item_being_dragged(ui, item_id) {
                         *source_path = Some((path.clone(), DragableType::CooldownModifier));
                     }
                     path.pop_back();
@@ -444,21 +514,26 @@ impl DrawableCard for Cooldown {
             });
         })
         .response;
-        if matches!(edit_mode, EditMode::FullEditing) {
-            let mut x_ui = ui.child_ui(
-                response.rect.shrink(CARD_UI_SPACING),
-                Layout::right_to_left(egui::Align::Min),
-            );
-
-            x_ui.visuals_mut().widgets.inactive.bg_stroke =
-                Stroke::new(0.5, Color32::from_rgb(255, 255, 255));
-            if x_ui.button("X").clicked() {
-                *modify_path = Some((path.clone(), ModificationType::Remove));
+            if matches!(edit_mode, EditMode::FullEditing) {
+                // allocate_ui_at_rect now takes a closure; run the UI code inside
+                // that closure so it receives the inner Ui to operate on.
+                let inner = ui.allocate_ui_at_rect(
+                    response.rect.shrink(CARD_UI_SPACING),
+                    |x_ui: &mut Ui| {
+                        x_ui.with_layout(Layout::right_to_left(egui::Align::Min), |x_ui| {
+                            x_ui.visuals_mut().widgets.inactive.bg_stroke =
+                                Stroke::new(0.5, Color32::from_rgb(255, 255, 255));
+                            if x_ui.button("X").clicked() {
+                                *modify_path = Some((path.clone(), ModificationType::Remove));
+                            }
+                        });
+                    },
+                );
+                let _ = inner; // ignore the response wrapper
             }
-        }
 
         if drop_path.is_none() {
-            let is_being_dragged = ui.memory(|mem| mem.is_anything_being_dragged());
+            let is_being_dragged = is_anything_being_dragged(ui);
             if is_being_dragged && can_accept_what_is_being_dragged && response.hovered() {
                 *drop_path = Some((path.clone(), DropableType::Cooldown));
             }
@@ -569,17 +644,17 @@ impl DrawableCard for Cooldown {
         if idx_type == 0 {
             let idx = path.pop_front().unwrap() as usize;
             assert!(path.is_empty());
-            match self.modifiers[idx] {
+            match &mut self.modifiers[idx] {
                 CooldownModifier::None => {
                     self.modifiers.remove(idx);
                 }
                 CooldownModifier::SimpleCooldownModifier(_, s) => {
-                    if s == 0 {
+                    if *s == 0 {
                         self.modifiers.remove(idx);
                     }
                 }
                 CooldownModifier::SignedSimpleCooldownModifier(_, s) => {
-                    if s == 0 {
+                    if *s == 0 {
                         self.modifiers.remove(idx);
                     }
                 }
@@ -819,7 +894,7 @@ impl DrawableCard for PassiveCard {
                 for (modifier_idx, _modifier) in self.passive_effects.iter().enumerate() {
                     path.push_back(modifier_idx as u32);
                     let item_id = egui::Id::new(ID_SOURCE).with(path.clone());
-                    if source_path.is_none() && ui.memory(|mem| mem.is_being_dragged(item_id)) {
+                    if source_path.is_none() && is_item_being_dragged(ui, item_id) {
                         *source_path = Some((path.clone(), DragableType::StatusEffect));
                     }
                     path.pop_back();
@@ -828,7 +903,7 @@ impl DrawableCard for PassiveCard {
             .response;
 
             if dest_path.is_none() {
-                let is_being_dragged = ui.memory(|mem| mem.is_anything_being_dragged());
+                let is_being_dragged = is_anything_being_dragged(ui);
                 if is_being_dragged && can_accept_what_is_being_dragged && response.hovered() {
                     *dest_path = Some((path.clone(), DropableType::BaseStatusEffects));
                 }
@@ -905,8 +980,10 @@ impl DrawableCard for PassiveCard {
         } else {
             let idx = path.pop_front().unwrap() as usize;
             assert!(path.pop_front().unwrap() == 0);
-            match self.passive_effects[idx] {
-                StatusEffect::OnHit(card) => card.cleanup(path),
+            match &mut self.passive_effects[idx] {
+                StatusEffect::OnHit(card_box) => {
+                    card_box.cleanup(path)
+                }
                 StatusEffect::SimpleStatusEffect(SimpleStatusEffectType::IncreaseGravity(_), _) => {
                 }
                 ref invalid => panic!(
@@ -1062,9 +1139,9 @@ impl DrawableCard for ProjectileModifier {
                             draw_modifier(
                                 ui,
                                 item_id,
-                                name,
+                                name.clone(),
                                 None::<&mut u32>,
-                                hover_text,
+                                hover_text.clone(),
                                 false,
                                 modify_path,
                                 path,
@@ -1088,9 +1165,9 @@ impl DrawableCard for ProjectileModifier {
                             draw_modifier(
                                 ui,
                                 item_id,
-                                name,
+                                name.clone(),
                                 Some(frequency),
-                                hover_text,
+                                hover_text.clone(),
                                 false,
                                 modify_path,
                                 path,
@@ -1264,9 +1341,9 @@ impl DrawableCard for StatusEffect {
                     draw_modifier(
                         ui,
                         item_id,
-                        name,
+                        name.clone(),
                         Some(v),
-                        hover_text,
+                        hover_text.clone(),
                         false,
                         modify_path,
                         path,
@@ -1326,7 +1403,7 @@ impl DrawableCard for StatusEffect {
                 match self {
                     StatusEffect::OnHit(base_card) => {
                         drag_source(ui, item_id, edit_mode.can_drag_modifiers(), |ui| {
-                            draw_label(ui, "On Hit", hover_text, modify_path, path);
+                            draw_label(ui, "On Hit", hover_text.clone(), modify_path, path);
                             path.push_back(0);
                             base_card.draw(
                                 ui,
@@ -1471,14 +1548,14 @@ impl DrawableCard for DirectionCard {
             .response;
 
             if dest_path.is_none() {
-                let is_being_dragged = ui.memory(|mem| mem.is_anything_being_dragged());
+                let is_being_dragged = is_anything_being_dragged(ui);
                 if is_being_dragged && can_accept_what_is_being_dragged && response.hovered() {
                     *dest_path = Some((path.clone(), DropableType::Direction));
                 }
             }
         });
 
-        if source_path.is_none() && ui.memory(|mem| mem.is_being_dragged(item_id)) {
+    if source_path.is_none() && is_item_being_dragged(ui, item_id) {
             *source_path = Some((path.clone(), DragableType::Direction));
         }
     }
@@ -1577,8 +1654,7 @@ impl DrawableCard for BaseCard {
                         for (modifier_idx, _modifier) in modifiers.iter().enumerate() {
                             path.push_back(modifier_idx as u32);
                             let item_id = egui::Id::new(ID_SOURCE).with(path.clone());
-                            if source_path.is_none()
-                                && ui.memory(|mem| mem.is_being_dragged(item_id))
+                            if source_path.is_none() && is_item_being_dragged(ui, item_id)
                             {
                                 *source_path =
                                     Some((path.clone(), DragableType::ProjectileModifier));
@@ -1589,7 +1665,7 @@ impl DrawableCard for BaseCard {
                     .response;
 
                     if dest_path.is_none() {
-                        let is_being_dragged = ui.memory(|mem| mem.is_anything_being_dragged());
+                        let is_being_dragged = is_anything_being_dragged(ui);
                         if is_being_dragged
                             && can_accept_what_is_being_dragged
                             && response.hovered()
@@ -1649,9 +1725,7 @@ impl DrawableCard for BaseCard {
                         for (modifier_idx, _modifier) in modifiers.iter().enumerate() {
                             path.push_back(modifier_idx as u32);
                             let item_id = egui::Id::new(ID_SOURCE).with(path.clone());
-                            if source_path.is_none()
-                                && ui.memory(|mem| mem.is_being_dragged(item_id))
-                            {
+                            if source_path.is_none() && is_item_being_dragged(ui, item_id) {
                                 *source_path =
                                     Some((path.clone(), DragableType::MultiCastModifier));
                             }
@@ -1662,7 +1736,7 @@ impl DrawableCard for BaseCard {
                     .response;
 
                     if dest_path.is_none() {
-                        let is_being_dragged = ui.memory(|mem| mem.is_anything_being_dragged());
+                        let is_being_dragged = is_anything_being_dragged(ui);
                         if is_being_dragged
                             && can_accept_what_is_being_dragged
                             && response.hovered()
@@ -1688,13 +1762,18 @@ impl DrawableCard for BaseCard {
                 let color = Color32::BLUE;
                 ui.painter().set(
                     where_to_put_background,
-                    epaint::RectShape::new(
-                        ui.min_rect(),
-                        CARD_UI_ROUNDING,
-                        darken(color, 0.25),
-                        Stroke::new(1.0, color),
-                    ),
+                    epaint::RectShape::filled(ui.min_rect(), CornerRadius::from(CARD_UI_ROUNDING), darken(color, 0.25)),
                 );
+                ui.painter().add(epaint::PathShape::convex_polygon(
+                    vec![
+                        ui.min_rect().left_top(),
+                        ui.min_rect().right_top(),
+                        ui.min_rect().right_bottom(),
+                        ui.min_rect().left_bottom(),
+                    ],
+                    Color32::TRANSPARENT,
+                    Stroke::new(1.0, color),
+                ));
             }
             BaseCard::Effect(effect) => {
                 let where_to_put_background = ui.painter().add(Shape::Noop);
@@ -1760,13 +1839,18 @@ impl DrawableCard for BaseCard {
                 let color = Color32::RED;
                 ui.painter().set(
                     where_to_put_background,
-                    epaint::RectShape::new(
-                        ui.min_rect(),
-                        CARD_UI_ROUNDING,
-                        darken(color, 0.25),
-                        Stroke::new(1.0, color),
-                    ),
+                    epaint::RectShape::filled(ui.min_rect(), CornerRadius::from(CARD_UI_ROUNDING), darken(color, 0.25)),
                 );
+                ui.painter().add(epaint::PathShape::convex_polygon(
+                    vec![
+                        ui.min_rect().left_top(),
+                        ui.min_rect().right_top(),
+                        ui.min_rect().right_bottom(),
+                        ui.min_rect().left_bottom(),
+                    ],
+                    Color32::TRANSPARENT,
+                    Stroke::new(1.0, color),
+                ));
             }
             BaseCard::StatusEffects(duration, effects) => {
                 let hover_text = format!(
@@ -1835,9 +1919,7 @@ impl DrawableCard for BaseCard {
                         for (modifier_idx, _modifier) in effects.iter().enumerate() {
                             path.push_back(modifier_idx as u32);
                             let item_id = egui::Id::new(ID_SOURCE).with(path.clone());
-                            if source_path.is_none()
-                                && ui.memory(|mem| mem.is_being_dragged(item_id))
-                            {
+                            if source_path.is_none() && is_item_being_dragged(ui, item_id) {
                                 *source_path = Some((path.clone(), DragableType::StatusEffect));
                             }
                             path.pop_back();
@@ -1846,7 +1928,7 @@ impl DrawableCard for BaseCard {
                     .response;
 
                     if dest_path.is_none() {
-                        let is_being_dragged = ui.memory(|mem| mem.is_anything_being_dragged());
+                        let is_being_dragged = is_anything_being_dragged(ui);
                         if is_being_dragged
                             && can_accept_what_is_being_dragged
                             && response.hovered()
@@ -1881,13 +1963,18 @@ impl DrawableCard for BaseCard {
                 let color = Color32::from_rgb(0, 255, 255);
                 ui.painter().set(
                     where_to_put_background,
-                    epaint::RectShape::new(
-                        ui.min_rect(),
-                        CARD_UI_ROUNDING,
-                        darken(color, 0.25),
-                        Stroke::new(1.0, color),
-                    ),
+                    epaint::RectShape::filled(ui.min_rect(), CornerRadius::from(CARD_UI_ROUNDING), darken(color, 0.25)),
                 );
+                ui.painter().add(epaint::PathShape::convex_polygon(
+                    vec![
+                        ui.min_rect().left_top(),
+                        ui.min_rect().right_top(),
+                        ui.min_rect().right_bottom(),
+                        ui.min_rect().left_bottom(),
+                    ],
+                    Color32::TRANSPARENT,
+                    Stroke::new(1.0, color),
+                ));
             }
             BaseCard::None => {
                 ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::new(1.0, Color32::GREEN);
@@ -1904,7 +1991,7 @@ impl DrawableCard for BaseCard {
                 .response;
 
                 if dest_path.is_none() {
-                    let is_being_dragged = ui.memory(|mem| mem.is_anything_being_dragged());
+                    let is_being_dragged = is_anything_being_dragged(ui);
                     if is_being_dragged && can_accept_what_is_being_dragged && response.hovered() {
                         *dest_path = Some((path.clone(), DropableType::BaseNone));
                     }
@@ -1935,7 +2022,7 @@ impl DrawableCard for BaseCard {
                     for (card_idx, card) in palette_cards.iter().enumerate() {
                         path.push_back(card_idx as u32);
                         let item_id = egui::Id::new(ID_SOURCE).with(path.clone());
-                        if source_path.is_none() && ui.memory(|mem| mem.is_being_dragged(item_id)) {
+                        if source_path.is_none() && is_item_being_dragged(ui, item_id) {
                             *source_path = Some((path.clone(), card.get_type()));
                         }
                         path.pop_back();
@@ -1945,14 +2032,14 @@ impl DrawableCard for BaseCard {
                 .response;
 
                 if dest_path.is_none() {
-                    let is_being_dragged = ui.memory(|mem| mem.is_anything_being_dragged());
+                    let is_being_dragged = is_anything_being_dragged(ui);
                     if is_being_dragged && can_accept_what_is_being_dragged && response.hovered() {
                         *dest_path = Some((path.clone(), DropableType::Palette));
                     }
                 }
             }
         });
-        if is_draggable && source_path.is_none() && ui.memory(|mem| mem.is_being_dragged(item_id)) {
+    if is_draggable && source_path.is_none() && is_item_being_dragged(ui, item_id) {
             *source_path = Some((path.clone(), DragableType::BaseCard));
         }
     }
@@ -2284,7 +2371,7 @@ impl DrawableCard for BaseCard {
                 } else {
                     let idx = path.pop_front().unwrap() as usize;
                     assert!(path.pop_front().unwrap() == 0);
-                    match effects[idx] {
+                    match &mut effects[idx] {
                         StatusEffect::OnHit(card) => card.cleanup(path),
                         StatusEffect::SimpleStatusEffect(
                             SimpleStatusEffectType::IncreaseGravity(_),
@@ -2396,7 +2483,7 @@ fn draw_modifier<T: std::fmt::Display + Numeric + Copy>(
     path: &mut VecDeque<u32>,
     edit_mode: &EditMode,
 ) {
-    ui.style_mut().wrap = Some(false);
+    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
     let mut job = LayoutJob::default();
     job.append(
         &name,
@@ -2481,59 +2568,59 @@ fn draw_modifier<T: std::fmt::Display + Numeric + Copy>(
         })
         .response
     };
-    // let is_being_dragged = ui.memory(|mem| mem.is_being_dragged(id));
+    let is_being_dragged = is_anything_being_dragged(ui);
 
-    // let can_be_dragged = edit_mode.can_drag_modifiers() && handle_drag;
-    // if !is_being_dragged || !can_be_dragged {
-    //     let prev_frame_area: Option<Rect> = ui.data(|d| d.get_temp(id));
-    //     let mut size = vec2(0.0, 0.0);
-    //     //load from previous frame
-    //     if let Some(area) = prev_frame_area {
-    //         if can_be_dragged {
-    //             // Check for drags:
-    //             let response = ui.interact(area, id, Sense::drag());
-    //             if response.hovered() {
-    //                 ui.ctx().set_cursor_icon(CursorIcon::Grab);
-    //             }
-    //         }
-    //         size.x = area.size().x;
-    //     }
-    //     if ui.available_size_before_wrap().x < size.x {
-    //         ui.end_row();
-    //     }
-    //     let response = ui.scope(add_contents).response;
+    let can_be_dragged = edit_mode.can_drag_modifiers() && handle_drag;
+    if !is_being_dragged || !can_be_dragged {
+        let prev_frame_area: Option<Rect> = ui.data(|d| d.get_temp(id));
+        let mut size = vec2(0.0, 0.0);
+        //load from previous frame
+        if let Some(area) = prev_frame_area {
+            if can_be_dragged {
+                // Check for drags:
+                let response = ui.interact(area, id, Sense::drag());
+                if response.hovered() {
+                    ui.ctx().set_cursor_icon(CursorIcon::Grab);
+                }
+            }
+            size.x = area.size().x;
+        }
+        if ui.available_size_before_wrap().x < size.x {
+            ui.end_row();
+        }
+        let response = ui.scope(add_contents).response;
 
-    //     if response.clicked() {
-    //         if modify_path.is_none() {
-    //             let modification_type = if ui.input(|i| i.modifiers.shift) {
-    //                 ModificationType::Remove
-    //             } else {
-    //                 ModificationType::Add
-    //             };
-    //             *modify_path = Some((path.clone(), modification_type));
-    //         }
-    //     }
-    //     //store for next frame
-    //     ui.data_mut(|d| d.insert_temp(id, response.rect.shrink(CARD_UI_SPACING)));
-    // } else {
-    //     ui.ctx().set_cursor_icon(CursorIcon::Grabbing);
+        if response.clicked() {
+            if modify_path.is_none() {
+                let modification_type = if ui.input(|i| i.modifiers.shift) {
+                    ModificationType::Remove
+                } else {
+                    ModificationType::Add
+                };
+                *modify_path = Some((path.clone(), modification_type));
+            }
+        }
+        //store for next frame
+        ui.data_mut(|d| d.insert_temp(id, response.rect.shrink(CARD_UI_SPACING)));
+    } else {
+        ui.ctx().set_cursor_icon(CursorIcon::Grabbing);
 
-    //     // Paint the body to a new layer:
-    //     let layer_id = LayerId::new(Order::Tooltip, id);
-    //     let response = ui.with_layer_id(layer_id, add_contents).response;
+        // Paint the body to a new layer:
+        let layer_id = LayerId::new(Order::Tooltip, id);
+        let response = ui.with_layer_id(layer_id, add_contents).response;
 
-    //     // Now we move the visuals of the body to where the mouse is.
-    //     // Normally you need to decide a location for a widget first,
-    //     // because otherwise that widget cannot interact with the mouse.
-    //     // However, a dragged component cannot be interacted with anyway
-    //     // (anything with `Order::Tooltip` always gets an empty [`Response`])
-    //     // So this is fine!
+        // Now we move the visuals of the body to where the mouse is.
+        // Normally you need to decide a location for a widget first,
+        // because otherwise that widget cannot interact with the mouse.
+        // However, a dragged component cannot be interacted with anyway
+        // (anything with `Order::Tooltip` always gets an empty [`Response`])
+        // So this is fine!
 
-    //     if let Some(pointer_pos) = ui.ctx().pointer_interact_pos() {
-    //         let delta = pointer_pos - response.rect.center();
-    //         ui.ctx().translate_layer(layer_id, delta);
-    //     }
-    // }
+        if let Some(pointer_pos) = ui.ctx().pointer_interact_pos() {
+            let delta = pointer_pos - response.rect.center();
+            ui.ctx().transform_layer_shapes(layer_id, TSTransform::from_translation(delta));
+        }
+    }
 }
 
 pub enum EditMode {
@@ -2573,9 +2660,9 @@ pub fn card_editor(
         .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0))
         .show(&ctx, |ui| {
             ui.painter()
-                .rect_filled(ui.available_rect_before_wrap(), 0.0, Color32::BLACK);
+                .rect_filled(ui.clip_rect(), 0.0, Color32::BLACK);
 
-            let menu_size = ui.available_rect_before_wrap().shrink2(vec2(PADDING, 0.0));
+            let menu_size = ui.clip_rect().shrink2(vec2(PADDING, 0.0));
 
             let mut edit_mode = 
             // if let Some(game) = game {
@@ -3097,10 +3184,6 @@ pub fn card_editor(
 //                 ));
 //             }
 
-//             ui.painter().add(epaint::Shape::rect_stroke(
-//                 healthbar_size,
-//                 Rounding::ZERO,
-//                 Stroke::new(thickness, color),
-//             ));
+//             ui.painter().rect_stroke(healthbar_size, CornerRadius::ZERO, Stroke::new(thickness, color));
 //         });
 // }
