@@ -131,7 +131,11 @@ struct App {
 
 impl App {
     fn new(compilation: CompilationResult) -> Self {
-        let settings = Settings::from_string(fs::read_to_string(SETTINGS_FILE).unwrap().as_str());
+        #[cfg(target_arch = "wasm32")]
+        let settings_string = include_str!("../settings.yaml");
+        #[cfg(not(target_arch = "wasm32"))]
+        let settings_string = fs::read_to_string(SETTINGS_FILE).unwrap();
+        let settings = Settings::from_string(&settings_string);
 
         let gui_state = GuiState {
             menu_stack: vec![GuiElement::MainMenu],
