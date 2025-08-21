@@ -2,6 +2,7 @@ mod egui_tools;
 mod gui;
 mod lobby_browser;
 mod settings_manager;
+mod card_system;
 mod shared;
 
 use slang_playground_compiler::CompilationResult;
@@ -26,11 +27,15 @@ extern crate console_error_panic_hook;
 #[cfg(not(target_arch = "wasm32"))]
 use slang_debug_app::DebugAppState;
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::card_system::Deck;
 use crate::{
-    gui::{GuiElement, GuiState, PaletteState, horizontal_centerer, vertical_centerer},
+    gui::{card_editor, horizontal_centerer, vertical_centerer, GuiElement, GuiState, PaletteState},
     lobby_browser::LobbyBrowser,
     settings_manager::{Control, Settings},
 };
+
+pub const PLAYER_BASE_MAX_HEALTH: f32 = 100.0;
 
 struct RenderData {
     pub window: Arc<Window>,
@@ -137,12 +142,18 @@ impl App {
         let settings_string = fs::read_to_string(SETTINGS_FILE).unwrap();
         let settings = Settings::from_string(&settings_string);
 
+        #[cfg(target_arch = "wasm32")]
+        let player_deck: Deck = Deck::empty();
+        #[cfg(not(target_arch = "wasm32"))]
+        let player_deck: Deck =
+            ron::from_str(fs::read_to_string(&settings.card_file).unwrap().as_str()).unwrap();
+
         let gui_state = GuiState {
             menu_stack: vec![GuiElement::MainMenu],
             errors: Vec::new(),
-            // gui_deck: player_deck.clone(),
-            // render_deck: player_deck.clone(),
-            // dock_cards: vec![],
+            gui_deck: player_deck.clone(),
+            render_deck: player_deck.clone(),
+            dock_cards: vec![],
             render_deck_idx: 0,
             cooldown_cache_refresh_delay: 0.0,
             palette_state: PaletteState::BaseCards,
@@ -366,7 +377,11 @@ impl App {
                         });
                 }
                 Some(&GuiElement::CardEditor) => {
-                    // card_editor(&ctx, gui_state, game);
+                    card_editor(
+                        &ctx,
+                        &mut self.gui_state,
+                        // game,
+                    );
                 }
 
                 Some(&GuiElement::MultiplayerMenu) => {
@@ -930,21 +945,22 @@ impl ApplicationHandler for App {
                                     .is_some_and(|gui| *gui == GuiElement::MainMenu)
                             {
                                 let exited_ui = self.gui_state.menu_stack.pop().unwrap();
-                                // match exited_ui {
-                                //     GuiElement::CardEditor => {
-                                //         self.gui_state.render_deck_idx = 0;
-                                //         self.gui_state.render_deck = self.gui_state.gui_deck.clone();
-                                //         let config = ron::ser::PrettyConfig::default();
-                                //         let export = ron::ser::to_string_pretty(
-                                //             &self.gui_state.gui_deck,
-                                //             config,
-                                //         )
-                                //         .unwrap();
-                                //         fs::write(&self.settings.card_file, export)
-                                //             .expect("failed to write card file");
-                                //     }
-                                //     _ => (),
-                                // }
+                                match exited_ui {
+                                    GuiElement::CardEditor => {
+                                        self.gui_state.render_deck_idx = 0;
+                                        self.gui_state.render_deck = self.gui_state.gui_deck.clone();
+                                        let config = ron::ser::PrettyConfig::default();
+                                        let export = ron::ser::to_string_pretty(
+                                            &self.gui_state.gui_deck,
+                                            config,
+                                        )
+                                        .unwrap();
+                                        #[cfg(not(target_arch = "wasm32"))]
+                                        fs::write(&self.settings.card_file, export)
+                                            .expect("failed to write card file");
+                                    }
+                                    _ => (),
+                                }
                             } else {
                                 self.gui_state.menu_stack.push(GuiElement::EscMenu);
                             }
