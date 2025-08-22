@@ -4,6 +4,8 @@ mod lobby_browser;
 mod settings_manager;
 mod card_system;
 mod shared;
+mod card_editor;
+mod utils;
 
 use slang_playground_compiler::CompilationResult;
 use slang_renderer::Renderer;
@@ -30,9 +32,7 @@ use slang_debug_app::DebugAppState;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::card_system::Deck;
 use crate::{
-    gui::{card_editor, horizontal_centerer, vertical_centerer, GuiElement, GuiState, PaletteState},
-    lobby_browser::LobbyBrowser,
-    settings_manager::{Control, Settings},
+    card_editor::{card_editor, PaletteState}, gui::{horizontal_centerer, vertical_centerer, GuiElement, GuiState}, lobby_browser::LobbyBrowser, settings_manager::{Control, Settings}
 };
 
 pub const PLAYER_BASE_MAX_HEALTH: f32 = 100.0;
