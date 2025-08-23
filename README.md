@@ -18,3 +18,14 @@ wasm-bindgen --out-dir target/generated/ --web target/wasm32-unknown-unknown/deb
 The web build should then be accessible from `index.html`. To see the current web deploy see the [Github Pages Deploy](https://devon7925.github.io/slang-voxels/).
 
 ![An example render of the voxel engine](docs/example_render.png)
+
+## Missing things compared to original
+
+* Healthbar
+* Cooldown display
+* Cooldown implementation
+* Projectiles
+* Player rendering
+* Multiplayer
+* Game modes
+* Working rendering settings

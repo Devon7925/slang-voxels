@@ -140,7 +140,7 @@ impl App {
         let settings_string = fs::read_to_string(SETTINGS_FILE).unwrap();
         let settings = Settings::from_string(&settings_string);
 
-        // #[cfg(target_arch = "wasm32")]
+        #[cfg(target_arch = "wasm32")]
         let player_deck: Deck = Deck::empty();
         #[cfg(not(target_arch = "wasm32"))]
         let player_deck: Deck =
