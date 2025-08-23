@@ -290,10 +290,10 @@ void update(uint2 dispatchThreadId: SV_DispatchThreadID)
     float3 player_right = player.right.xyz;
     float speed_multiplier = 1.0;
 
-    move_vec += player_forward * (playerInput[0].forward - playerInput[0].backward);
-    move_vec += player_right * (playerInput[0].right - playerInput[0].left);
-    move_vec += float3(0.0, 1.0, 0.0) * (0.25 * playerInput[0].jump - 0.6 * playerInput[0].crouch);
-    speed_multiplier /= 1.0 + playerInput[0].crouch;
+    move_vec += player_forward * (playerInput.forward - playerInput.backward);
+    move_vec += player_right * (playerInput.right - playerInput.left);
+    move_vec += float3(0.0, 1.0, 0.0) * (0.25 * playerInput.jump - 0.6 * playerInput.crouch);
+    speed_multiplier /= 1.0 + playerInput.crouch;
 
     if (length(move_vec) > 0.0)
         move_vec = normalize(move_vec);
@@ -307,7 +307,7 @@ void update(uint2 dispatchThreadId: SV_DispatchThreadID)
     float3 speed_vec = float3(SPEED, 1.0, SPEED);
     player.vel += accel_speed * (speed_vec * move_vec) * deltaTime;
 
-    if (playerInput[0].jump > 0.0)
+    if (playerInput.jump > 0.0)
     {
         player.vel += speed_vec * player.collision_vec * float3(0.3, 13.0, 0.3);
     }

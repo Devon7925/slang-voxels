@@ -54,8 +54,8 @@ struct PlayerInput
     float interact;
 }
 
-[playground::EXTERNAL(1)]
-StructuredBuffer<PlayerInput> playerInput;
+[playground::EXTERNAL_UNIFORM]
+uniform PlayerInput playerInput;
 
 struct GameData
 {

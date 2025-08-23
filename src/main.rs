@@ -67,7 +67,6 @@ impl RenderData {
             .request_device(&wgpu::DeviceDescriptor {
                 required_features: Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
                 required_limits: wgpu::Limits {
-                    max_storage_buffers_per_shader_stage: 9, // this should be fixed later for compat
                     ..wgpu::Limits::default()
                 },
                 ..Default::default()
