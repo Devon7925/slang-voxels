@@ -29,7 +29,6 @@ extern crate console_error_panic_hook;
 #[cfg(not(target_arch = "wasm32"))]
 use slang_debug_app::DebugAppState;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::card_system::Deck;
 use crate::{
     card_editor::{card_editor, PaletteState}, gui::{horizontal_centerer, vertical_centerer, GuiElement, GuiState}, lobby_browser::LobbyBrowser, settings_manager::{Control, Settings}
@@ -141,7 +140,7 @@ impl App {
         let settings_string = fs::read_to_string(SETTINGS_FILE).unwrap();
         let settings = Settings::from_string(&settings_string);
 
-        #[cfg(target_arch = "wasm32")]
+        // #[cfg(target_arch = "wasm32")]
         let player_deck: Deck = Deck::empty();
         #[cfg(not(target_arch = "wasm32"))]
         let player_deck: Deck =
