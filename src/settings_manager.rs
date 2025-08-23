@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 use winit::event::{MouseButton};
 use winit::keyboard::KeyCode;
 
-use crate::shared::GameSettings;
+use crate::{
+    shared::GameSettings,
+    playground_module
+};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Settings {
@@ -14,7 +17,7 @@ pub struct Settings {
     pub card_dir: String,
     pub fullscreen_toggle: KeyCode,
     pub movement_controls: ControlSettings,
-    pub graphics_settings: GraphicsSettings,
+    pub graphics_settings: playground_module::GraphicsSettings,
     pub replay_settings: ReplaySettings,
     pub do_profiling: bool,
     pub crash_log: String,
@@ -59,14 +62,6 @@ pub struct ControlSettings {
     pub jump: Control,
     pub crouch: Control,
     pub sensitivity: f32,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct GraphicsSettings {
-    pub primary_ray_dist: u32,
-    pub shadow_ray_dist: u32,
-    pub reflection_ray_dist: u32,
-    pub ao_ray_dist: u32,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

@@ -12,10 +12,9 @@ movement_controls:
   crouch: !Key ControlLeft
   sensitivity: 0.001
 graphics_settings:
-  primary_ray_dist: 100
-  transparency_ray_dist: 75
-  shadow_ray_dist: 40
-  reflection_ray_dist: 20
+  primary_ray_dist: 150
+  shadow_ray_dist: 20
+  reflection_ray_dist: 15
   ao_ray_dist: 15
 replay_settings:
   replay_folder: replays

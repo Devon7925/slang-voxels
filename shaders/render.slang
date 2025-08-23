@@ -524,16 +524,16 @@ float3 get_color(float3 pos, float3 ray, RaycastResult primary_ray, uint vertica
         MaterialProperties mat_props = position_material(primary_ray.layers[i], ray, 3 - i / 2, vertical_resolution);
         color += (1.0 - mat_props.transparency) * multiplier * mat_props.albedo * mat_props.emmision;
 
-        SimpleRaycastResult shade_check = simple_raycast(primary_ray.layers[i].pos + epsilon * primary_ray.layers[i].normal, -light_dir, shadow_ray_dist);
+        SimpleRaycastResult shade_check = simple_raycast(primary_ray.layers[i].pos + epsilon * primary_ray.layers[i].normal, -light_dir, graphicsSettings.shadow_ray_dist);
         if (shade_check.voxel_data >> 24 == MAT_OOB)
         {
             color += multiplier * get_light(-light_dir, -ray, (1.0 - mat_props.transparency) * shade_check.passthrough_light * float3(1.0), 1.0, mat_props);
         }
 
         float3 reflection = reflect(ray, mat_props.normal);
-        RaycastResultLayer reflection_check = single_raycast(primary_ray.layers[i].pos + epsilon * primary_ray.layers[i].normal, reflection, reflection_ray_dist);
+        RaycastResultLayer reflection_check = single_raycast(primary_ray.layers[i].pos + epsilon * primary_ray.layers[i].normal, reflection, graphicsSettings.reflection_ray_dist);
         MaterialRenderProps reflection_props = material_render_props[reflection_check.voxel_data >> 24];
-        SimpleRaycastResult reflection_light_check = simple_raycast(reflection_check.pos - epsilon * reflection, -light_dir, ao_ray_dist);
+        SimpleRaycastResult reflection_light_check = simple_raycast(reflection_check.pos - epsilon * reflection, -light_dir, graphicsSettings.ao_ray_dist);
         float3 light = float3(0);
         if (reflection_check.voxel_data >> 24 == MAT_OOB)
         {
@@ -546,7 +546,7 @@ float3 get_color(float3 pos, float3 ray, RaycastResult primary_ray, uint vertica
         color += multiplier * get_light(reflection, -ray, (1 - mat_props.transparency) * light, 1.0, mat_props);
 
         float3 ao_dir = mat_props.normal;
-        SimpleRaycastResult ao_check = simple_raycast(primary_ray.layers[i].pos + epsilon * primary_ray.layers[i].normal, ao_dir, ao_ray_dist);
+        SimpleRaycastResult ao_check = simple_raycast(primary_ray.layers[i].pos + epsilon * primary_ray.layers[i].normal, ao_dir, graphicsSettings.ao_ray_dist);
         if (ao_check.voxel_data >> 24 == MAT_OOB)
         {
             float light_power = pow(max(dot(ao_dir, -light_dir), 0.0), 3.0);
@@ -554,7 +554,7 @@ float3 get_color(float3 pos, float3 ray, RaycastResult primary_ray, uint vertica
         }
 
         ao_dir = normalize(2.0 * mat_props.normal - light_dir);
-        ao_check = simple_raycast(primary_ray.layers[i].pos + epsilon * primary_ray.layers[i].normal, ao_dir, ao_ray_dist);
+        ao_check = simple_raycast(primary_ray.layers[i].pos + epsilon * primary_ray.layers[i].normal, ao_dir, graphicsSettings.ao_ray_dist);
         if (ao_check.voxel_data >> 24 == MAT_OOB)
         {
             float light_power = pow(max(dot(ao_dir, -light_dir), 0.0), 3.0);

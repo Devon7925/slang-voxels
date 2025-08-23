@@ -1,10 +1,10 @@
+mod card_editor;
+mod card_system;
 mod egui_tools;
 mod gui;
 mod lobby_browser;
 mod settings_manager;
-mod card_system;
 mod shared;
-mod card_editor;
 mod utils;
 
 use slang_playground_compiler::CompilationResult;
@@ -31,7 +31,10 @@ use slang_debug_app::DebugAppState;
 
 use crate::card_system::Deck;
 use crate::{
-    card_editor::{card_editor, PaletteState}, gui::{horizontal_centerer, vertical_centerer, GuiElement, GuiState}, lobby_browser::LobbyBrowser, settings_manager::{Control, Settings}
+    card_editor::{PaletteState, card_editor},
+    gui::{GuiElement, GuiState, horizontal_centerer, vertical_centerer},
+    lobby_browser::LobbyBrowser,
+    settings_manager::{Control, Settings},
 };
 
 pub const PLAYER_BASE_MAX_HEALTH: f32 = 100.0;
@@ -204,6 +207,11 @@ impl App {
 
         if let Some(game) = self.game.as_mut() {
             playground_module::set_player_input(game, self.player_input);
+            // propagate graphics settings from the app settings to the shader external uniform
+            playground_module::set_graphics_settings(
+                game,
+                self.settings.graphics_settings,
+            );
             game.begin_frame();
             game.run_compute_passes(&mut encoder);
             game.run_draw_passes(&mut encoder, &texture_view);
@@ -421,7 +429,9 @@ impl App {
                                                     return;
                                                 }
                                             };
-                                            let new_lobby_id = pollster::block_on(new_lobby_response.json::<String>());
+                                            let new_lobby_id = pollster::block_on(
+                                                new_lobby_response.json::<String>(),
+                                            );
                                             let new_lobby_id = match new_lobby_id {
                                                 Ok(new_lobby_id) => new_lobby_id,
                                                 Err(e) => {
@@ -946,7 +956,8 @@ impl ApplicationHandler for App {
                                 match exited_ui {
                                     GuiElement::CardEditor => {
                                         self.gui_state.render_deck_idx = 0;
-                                        self.gui_state.render_deck = self.gui_state.gui_deck.clone();
+                                        self.gui_state.render_deck =
+                                            self.gui_state.gui_deck.clone();
                                         let config = ron::ser::PrettyConfig::default();
                                         let export = ron::ser::to_string_pretty(
                                             &self.gui_state.gui_deck,

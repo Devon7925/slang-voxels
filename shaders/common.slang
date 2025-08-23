@@ -1,8 +1,3 @@
-static const uint primary_ray_dist = 200;
-static const uint shadow_ray_dist = 40;
-static const uint reflection_ray_dist = 20;
-static const uint ao_ray_dist = 15;
-
 static const uint CHUNK_MAGNITUDE = 4;
 static const uint CHUNK_SIZE = 1 << CHUNK_MAGNITUDE;
 static const uint CHUNK_VOLUME = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;

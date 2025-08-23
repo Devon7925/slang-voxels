@@ -3334,7 +3334,7 @@ checksum = "7a2ae44ef20feb57a68b23d846850f861394c2e02dc425a50098ae8c90267589"
 [[package]]
 name = "slang-debug-app"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#ff4f7d2fda21349fe5be1be2c73ae0b8fa7b32e6"
+source = "git+https://github.com/Devon7925/slang-native-playground#8bcae21d5995f6f2f4fb749b39eac52877baabf3"
 dependencies = [
  "egui",
  "egui-wgpu",
@@ -3350,7 +3350,7 @@ dependencies = [
 [[package]]
 name = "slang-playground-compiler"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#ff4f7d2fda21349fe5be1be2c73ae0b8fa7b32e6"
+source = "git+https://github.com/Devon7925/slang-native-playground#8bcae21d5995f6f2f4fb749b39eac52877baabf3"
 dependencies = [
  "bytemuck",
  "dyn-clone",
@@ -3382,7 +3382,7 @@ dependencies = [
 [[package]]
 name = "slang-renderer"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#ff4f7d2fda21349fe5be1be2c73ae0b8fa7b32e6"
+source = "git+https://github.com/Devon7925/slang-native-playground#8bcae21d5995f6f2f4fb749b39eac52877baabf3"
 dependencies = [
  "bytemuck",
  "console_error_panic_hook",
@@ -3402,7 +3402,7 @@ dependencies = [
 [[package]]
 name = "slang-shader-macros"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#ff4f7d2fda21349fe5be1be2c73ae0b8fa7b32e6"
+source = "git+https://github.com/Devon7925/slang-native-playground#8bcae21d5995f6f2f4fb749b39eac52877baabf3"
 dependencies = [
  "base64",
  "heck",

@@ -57,6 +57,17 @@ struct PlayerInput
 [playground::EXTERNAL_UNIFORM]
 uniform PlayerInput playerInput;
 
+struct GraphicsSettings
+{
+    uint primary_ray_dist;
+    uint shadow_ray_dist;
+    uint reflection_ray_dist;
+    uint ao_ray_dist;
+}
+
+[playground::EXTERNAL_UNIFORM]
+uniform GraphicsSettings graphicsSettings;
+
 struct GameData
 {
     float4 prevMouse;

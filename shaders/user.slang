@@ -18,7 +18,7 @@ float4 imageMain(uint2 dispatchThreadID, int2 screenSize)
 
     var pos = cam_data.pos.xyz;
 
-    RaycastResult primary_ray = raycast(pos, ray, primary_ray_dist);
+    RaycastResult primary_ray = raycast(pos, ray, graphicsSettings.primary_ray_dist);
 
     if (primary_ray.layer_count == 0)
     {
