@@ -14,8 +14,7 @@ pub struct Settings {
     pub remote_url: String,
     pub card_file: String,
     pub card_dir: String,
-    #[egui_probe(skip)]
-    pub fullscreen_toggle: KeyCode,
+    pub fullscreen_toggle: Control,
     pub movement_controls: ControlSettings,
     pub graphics_settings: playground_module::GraphicsSettings,
     pub replay_settings: ReplaySettings,

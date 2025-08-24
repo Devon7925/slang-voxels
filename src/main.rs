@@ -33,7 +33,7 @@ use slang_debug_app::DebugAppState;
 use crate::card_system::Deck;
 use crate::{
     card_editor::{PaletteState, card_editor},
-    gui::{GuiElement, GuiState, horizontal_centerer, vertical_centerer, PADDING},
+    gui::{GuiElement, GuiState, PADDING, horizontal_centerer, vertical_centerer},
     lobby_browser::LobbyBrowser,
     settings_manager::{Control, Settings},
 };
@@ -479,16 +479,13 @@ impl App {
                     egui::TopBottomPanel::bottom("bottom_panel").show(&ctx, |ui| {
                         ui.horizontal(|ui| {
                             if ui.button("Save").clicked() {
-                                if let Err(e) =
-                                    fs::write(SETTINGS_FILE, self.settings.to_string())
+                                if let Err(e) = fs::write(SETTINGS_FILE, self.settings.to_string())
                                 {
                                     self.gui_state
                                         .errors
                                         .push(format!("Failed to save settings: {}", e));
                                 } else {
-                                    self.gui_state
-                                        .errors
-                                        .push("Settings saved".to_string());
+                                    self.gui_state.errors.push("Settings saved".to_string());
                                 }
                             }
                             if ui.button("Back").clicked() {
@@ -836,6 +833,18 @@ impl App {
         surface_texture.present();
     }
 
+    fn toggle_fullscreen(&mut self) {
+        let Some(render_data) = self.render_data.as_mut() else {
+            return;
+        };
+        let win = &render_data.window;
+        if win.fullscreen().is_some() {
+            win.set_fullscreen(None);
+        } else {
+            win.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+        }
+    }
+
     #[cfg(target_arch = "wasm32")]
     fn ensure_state_is_loaded(&mut self) -> bool {
         if self.render_data.is_some() {
@@ -979,6 +988,15 @@ impl ApplicationHandler for App {
                 key_match!(forward);
                 key_match!(backward);
 
+                // Check for fullscreen toggle key binding
+                if state == ElementState::Released {
+                    if let Control::Key(key_code) = self.settings.fullscreen_toggle
+                        && key_code == physical_key
+                    {
+                        toggle_fullscreen(&render_data.window);
+                    }
+                }
+
                 match physical_key {
                     PhysicalKey::Code(KeyCode::Escape) => {
                         if state == ElementState::Released {
@@ -1013,6 +1031,16 @@ impl ApplicationHandler for App {
                         }
                     }
                     _ => {}
+                }
+            }
+            WindowEvent::MouseInput { state, button, .. } => {
+                // If the fullscreen toggle is bound to a mouse button, toggle on released
+                if state == ElementState::Released {
+                    if let Control::Mouse(bind_button) = self.settings.fullscreen_toggle
+                        && bind_button == button
+                    {
+                        toggle_fullscreen(&render_data.window);
+                    }
                 }
             }
             _ => (),
@@ -1050,6 +1078,14 @@ impl ApplicationHandler for App {
                 debug_app.about_to_wait();
             }
         }
+    }
+}
+
+fn toggle_fullscreen(win: &Arc<Window>) {
+    if win.fullscreen().is_some() {
+        win.set_fullscreen(None);
+    } else {
+        win.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
     }
 }
 

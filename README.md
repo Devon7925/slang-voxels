@@ -4,7 +4,7 @@ This is a simple example of using [slang-native-playground](https://github.com/D
 
 ## Running
 
-This app can be run by cloning the repository and then executing `cargo run` from the root folder. 
+This app can be run by cloning the repository and then executing `cargo run` from the root folder.
 
 ## Web Build
 
@@ -29,4 +29,3 @@ The web build should then be accessible from `index.html`. To see the current we
 * Multiplayer
 * Game modes
 * GUI notifications
-* fullscreen_toggle doesn't work
