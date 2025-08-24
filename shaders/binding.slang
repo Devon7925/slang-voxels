@@ -57,6 +57,7 @@ struct PlayerInput
 [playground::EXTERNAL_UNIFORM]
 uniform PlayerInput playerInput;
 
+[playground_ANNOTATION("derive(EguiProbe)")]
 struct GraphicsSettings
 {
     uint primary_ray_dist;

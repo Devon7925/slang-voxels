@@ -17,7 +17,6 @@ pub struct Settings {
     #[egui_probe(skip)]
     pub fullscreen_toggle: KeyCode,
     pub movement_controls: ControlSettings,
-    #[egui_probe(skip)]
     pub graphics_settings: playground_module::GraphicsSettings,
     pub replay_settings: ReplaySettings,
     pub do_profiling: bool,

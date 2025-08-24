@@ -1088,5 +1088,6 @@ fn main() {
 }
 
 mod playground_module {
+    use egui_probe::EguiProbe;
     slang_shader_macros::shader_module!("user.slang", ["shaders"]);
 }
