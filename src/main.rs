@@ -288,6 +288,7 @@ impl App {
                                         if ui.button("Settings").clicked() {
                                             self.gui_state.menu_stack.push(GuiElement::Settings);
                                         }
+                                        #[cfg(not(target_arch = "wasm32"))]
                                         if ui.button("Exit to Desktop").clicked() {
                                             self.gui_state.should_exit = true;
                                         }
@@ -378,6 +379,7 @@ impl App {
                                         self.gui_state.menu_stack.push(GuiElement::MainMenu);
                                         self.game = None;
                                     }
+                                    #[cfg(not(target_arch = "wasm32"))]
                                     if ui.button("Exit to Desktop").clicked() {
                                         self.gui_state.should_exit = true;
                                     }
@@ -1024,10 +1026,16 @@ impl ApplicationHandler for App {
         }
     }
 
-    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         #[cfg(target_arch = "wasm32")]
         if !self.ensure_state_is_loaded() {
             return; // Still loading, skip event
+        }
+
+        // If the UI requested exit (via "Exit to Desktop" buttons), stop the event loop.
+        if self.gui_state.should_exit {
+            event_loop.exit();
+            return;
         }
 
         #[cfg(not(target_arch = "wasm32"))]

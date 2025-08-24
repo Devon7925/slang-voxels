@@ -29,3 +29,4 @@ The web build should then be accessible from `index.html`. To see the current we
 * Multiplayer
 * Game modes
 * GUI notifications
+* fullscreen_toggle doesn't work
