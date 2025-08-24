@@ -27,9 +27,6 @@ use std::panic;
 #[cfg(target_family = "wasm")]
 extern crate console_error_panic_hook;
 
-#[cfg(not(target_arch = "wasm32"))]
-use slang_debug_app::DebugAppState;
-
 use crate::card_system::Deck;
 use crate::{
     card_editor::{PaletteState, card_editor},
@@ -128,8 +125,6 @@ struct App {
     player_input: playground_module::PlayerInput,
     #[cfg(target_arch = "wasm32")]
     state_receiver: Option<futures::channel::oneshot::Receiver<RenderData>>,
-    #[cfg(not(target_arch = "wasm32"))]
-    debug_app: Option<DebugAppState>,
     compilation: Option<CompilationResult>,
     surface_format: wgpu::TextureFormat,
     settings: Settings,
@@ -175,11 +170,10 @@ impl App {
                 jump: 0.0,
                 crouch: 0.0,
                 interact: 0.0,
+                mouseSensitivity: settings.movement_controls.sensitivity,
             },
             #[cfg(target_arch = "wasm32")]
             state_receiver: None,
-            #[cfg(not(target_arch = "wasm32"))]
-            debug_app: None,
             compilation: Some(compilation),
             surface_format: wgpu::TextureFormat::Rgba8Unorm,
             settings,
@@ -207,6 +201,7 @@ impl App {
             .create_command_encoder(&Default::default());
 
         if let Some(game) = self.game.as_mut() {
+            self.player_input.mouseSensitivity = self.settings.movement_controls.sensitivity;
             playground_module::set_player_input(game, self.player_input);
             playground_module::set_graphics_settings(game, self.settings.graphics_settings);
             game.begin_frame();
@@ -833,18 +828,6 @@ impl App {
         surface_texture.present();
     }
 
-    fn toggle_fullscreen(&mut self) {
-        let Some(render_data) = self.render_data.as_mut() else {
-            return;
-        };
-        let win = &render_data.window;
-        if win.fullscreen().is_some() {
-            win.set_fullscreen(None);
-        } else {
-            win.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
-        }
-    }
-
     #[cfg(target_arch = "wasm32")]
     fn ensure_state_is_loaded(&mut self) -> bool {
         if self.render_data.is_some() {
@@ -899,17 +882,6 @@ impl ApplicationHandler for App {
                 }
             });
         }
-
-        // #[cfg(not(target_arch = "wasm32"))]
-        // if cfg!(debug_assertions) {
-        //     let debug_state = pollster::block_on(DebugAppState::new(
-        //         event_loop,
-        //         (1360, 768),
-        //         self.render_data.as_ref().unwrap().state.uniform_components.clone(),
-        //     ));
-        //     self.debug_app = Some(debug_state);
-        //     self.render_data.as_ref().unwrap().window.focus_window();
-        // }
     }
 
     fn window_event(
@@ -929,13 +901,6 @@ impl ApplicationHandler for App {
         #[cfg(target_arch = "wasm32")]
         if !self.ensure_state_is_loaded() {
             return; // Still loading, skip event
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        if let Some(debug_app) = self.debug_app.as_mut()
-            && debug_app.get_window_id() == _window_id
-        {
-            debug_app.handle_input(&event);
-            return;
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -1070,14 +1035,6 @@ impl ApplicationHandler for App {
         self.render_frame();
         #[cfg(target_arch = "wasm32")]
         self.render_data.as_ref().unwrap().window.request_redraw();
-
-        #[cfg(not(target_arch = "wasm32"))]
-        // Only handle debug window if in debug mode
-        if cfg!(debug_assertions) {
-            if let Some(debug_app) = self.debug_app.as_mut() {
-                debug_app.about_to_wait();
-            }
-        }
     }
 }
 

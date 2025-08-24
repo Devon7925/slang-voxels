@@ -27,5 +27,6 @@ The web build should then be accessible from `index.html`. To see the current we
 * Projectiles
 * Player rendering
 * Multiplayer
+* GameSettings
 * Game modes
 * GUI notifications

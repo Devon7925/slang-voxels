@@ -4,9 +4,6 @@ import binding;
 
 [playground::KEY("Digit1")]
 uniform float createWater;
-
-[playground::SLIDER(1.0, 0.0, 5.0)]
-uniform float mouseSensitivity;
 [playground::DELTA_TIME]
 uniform float deltaTime;
 
@@ -253,7 +250,7 @@ void update(uint2 dispatchThreadId: SV_DispatchThreadID)
         float2 mouse_delta = mousePosition.xy - gameData[0].prevMouse.xy;
 
         // Yaw rotation (left/right)
-        float yaw_angle = -mouse_delta.x * mouseSensitivity * 0.005;
+        float yaw_angle = -mouse_delta.x * playerInput.mouseSensitivity;
         float cos_yaw = cos(yaw_angle);
         float sin_yaw = sin(yaw_angle);
         float3x3 yaw_matrix = float3x3(
@@ -264,7 +261,7 @@ void update(uint2 dispatchThreadId: SV_DispatchThreadID)
         player.dir.xyz = mul(yaw_matrix, player.dir.xyz);
 
         // Pitch rotation (up/down)
-        float pitch_angle = -mouse_delta.y * mouseSensitivity * 0.005;
+        float pitch_angle = -mouse_delta.y * playerInput.mouseSensitivity;
         float3 right_vec = normalize(cross(player.dir.xyz, float3(0, 1, 0)));
         float cos_pitch = cos(pitch_angle);
         float sin_pitch = sin(pitch_angle);

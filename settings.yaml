@@ -10,7 +10,7 @@ movement_controls:
   right: !Key KeyD
   jump: !Key Space
   crouch: !Key ControlLeft
-  sensitivity: 0.001
+  sensitivity: 0.01
 graphics_settings:
   primary_ray_dist: 150
   shadow_ray_dist: 20

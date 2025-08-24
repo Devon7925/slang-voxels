@@ -52,6 +52,7 @@ struct PlayerInput
     float jump;
     float crouch;
     float interact;
+    float mouseSensitivity;
 }
 
 [playground::EXTERNAL_UNIFORM]
