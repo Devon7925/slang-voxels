@@ -28,4 +28,4 @@ The web build should then be accessible from `index.html`. To see the current we
 * Player rendering
 * Multiplayer
 * Game modes
-* Working rendering settings
+* GUI notifications

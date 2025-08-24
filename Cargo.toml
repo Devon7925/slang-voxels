@@ -23,7 +23,9 @@ egui-winit = { version = "0.32.0", default-features = false, features = [
     "x11",
 ] }
 slang-playground-compiler = { git = "https://github.com/Devon7925/slang-native-playground" }
-slang-shader-macros = { git = "https://github.com/Devon7925/slang-native-playground", features=["renderer-integration"] }
+slang-shader-macros = { git = "https://github.com/Devon7925/slang-native-playground", features = [
+    "renderer-integration",
+] }
 slang-renderer = { git = "https://github.com/Devon7925/slang-native-playground" }
 egui-wgpu = "0.32.0"
 egui = "0.32.0"
@@ -33,6 +35,7 @@ itertools = "0.14.0"
 egui_extras = "0.32.1"
 once_cell = "1.21.3"
 puffin = "0.19"
+egui-probe = { version = "0.9.0", features = ["derive"] }
 
 [target.wasm32-unknown-unknown.dependencies]
 getrandom = { version = "0.3.3", features = ["wasm_js"] }

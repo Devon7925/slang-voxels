@@ -1,15 +1,12 @@
-use egui::{
-    self, Color32, Id, Rect, Rgba, Ui
-};
+use egui::{self, Color32, Id, Rect, Rgba, Ui};
 
 use crate::{
-    card_system::{
-        Deck, DragableCard,
-    }, card_editor::PaletteState, lobby_browser::LobbyBrowser
-    // utils::{translate_egui_key_code, translate_egui_pointer_button},
+    card_editor::PaletteState,
+    card_system::{Deck, DragableCard},
+    lobby_browser::LobbyBrowser, // utils::{translate_egui_key_code, translate_egui_pointer_button},
 };
 
-const ID_SOURCE: &str = "card_editor";
+pub const PADDING: f32 = 10.0;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub enum GuiElement {
@@ -22,6 +19,7 @@ pub enum GuiElement {
     SingleplayerMenu,
     ModeGui,
     DeckPicker,
+    Settings,
 }
 
 pub struct GuiState {
@@ -43,7 +41,7 @@ pub struct GuiState {
 pub fn vertical_centerer(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
     ui.vertical(|ui| {
         let id = ui.id().with("_v_centerer");
-    let last_height: Option<f32> = ui.memory_mut(|mem| mem.data.get_temp::<f32>(id));
+        let last_height: Option<f32> = ui.memory_mut(|mem| mem.data.get_temp::<f32>(id));
         if let Some(last_height) = last_height {
             ui.add_space((ui.available_height() - last_height) / 2.0);
         }
@@ -67,7 +65,7 @@ pub fn vertical_centerer(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
 pub fn horizontal_centerer(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
     ui.horizontal(|ui| {
         let id = ui.id().with("_h_centerer");
-    let last_width: Option<f32> = ui.memory_mut(|mem| mem.data.get_temp::<f32>(id));
+        let last_width: Option<f32> = ui.memory_mut(|mem| mem.data.get_temp::<f32>(id));
         if let Some(last_width) = last_width {
             ui.add_space((ui.available_width() - last_width) / 2.0);
         }
@@ -165,14 +163,14 @@ fn translate_egui_key_code(key: egui::Key) -> winit::keyboard::KeyCode {
         Key::Enter => KeyCode::Enter,
         Key::Space => KeyCode::Space,
         Key::Backspace => KeyCode::Backspace,
-    Key::ArrowDown => KeyCode::ArrowDown,
-    Key::ArrowLeft => KeyCode::ArrowLeft,
-    Key::ArrowRight => KeyCode::ArrowRight,
-    Key::ArrowUp => KeyCode::ArrowUp,
-    // For keys we don't explicitly map, return Escape as a harmless
-    // default so the function remains total. A better mapping could be
-    // added later if needed.
-    _ => KeyCode::Escape,
+        Key::ArrowDown => KeyCode::ArrowDown,
+        Key::ArrowLeft => KeyCode::ArrowLeft,
+        Key::ArrowRight => KeyCode::ArrowRight,
+        Key::ArrowUp => KeyCode::ArrowUp,
+        // For keys we don't explicitly map, return Escape as a harmless
+        // default so the function remains total. A better mapping could be
+        // added later if needed.
+        _ => KeyCode::Escape,
     }
 }
 

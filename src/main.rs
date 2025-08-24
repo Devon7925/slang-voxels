@@ -2,6 +2,7 @@ mod card_editor;
 mod card_system;
 mod egui_tools;
 mod gui;
+use egui_probe::Probe;
 mod lobby_browser;
 mod settings_manager;
 mod shared;
@@ -32,7 +33,7 @@ use slang_debug_app::DebugAppState;
 use crate::card_system::Deck;
 use crate::{
     card_editor::{PaletteState, card_editor},
-    gui::{GuiElement, GuiState, horizontal_centerer, vertical_centerer},
+    gui::{GuiElement, GuiState, horizontal_centerer, vertical_centerer, PADDING},
     lobby_browser::LobbyBrowser,
     settings_manager::{Control, Settings},
 };
@@ -207,11 +208,7 @@ impl App {
 
         if let Some(game) = self.game.as_mut() {
             playground_module::set_player_input(game, self.player_input);
-            // propagate graphics settings from the app settings to the shader external uniform
-            playground_module::set_graphics_settings(
-                game,
-                self.settings.graphics_settings,
-            );
+            playground_module::set_graphics_settings(game, self.settings.graphics_settings);
             game.begin_frame();
             game.run_compute_passes(&mut encoder);
             game.run_draw_passes(&mut encoder, &texture_view);
@@ -288,6 +285,9 @@ impl App {
                                         if ui.button("Card Editor").clicked() {
                                             self.gui_state.menu_stack.push(GuiElement::CardEditor);
                                         }
+                                        if ui.button("Settings").clicked() {
+                                            self.gui_state.menu_stack.push(GuiElement::Settings);
+                                        }
                                         if ui.button("Exit to Desktop").clicked() {
                                             self.gui_state.should_exit = true;
                                         }
@@ -359,6 +359,9 @@ impl App {
                                     ui.label(RichText::new("Menu").color(Color32::WHITE));
                                     if ui.button("Card Editor").clicked() {
                                         self.gui_state.menu_stack.push(GuiElement::CardEditor);
+                                    }
+                                    if ui.button("Settings").clicked() {
+                                        self.gui_state.menu_stack.push(GuiElement::Settings);
                                     }
                                     // if let Some(game) = game {
                                     //     if game.game_mode.has_mode_gui() {
@@ -464,6 +467,38 @@ impl App {
                                         }
                                     });
                                 });
+                            });
+                        });
+                }
+                Some(&GuiElement::Settings) => {
+                    egui::TopBottomPanel::top("top_panel").show(&ctx, |ui| {
+                        ui.heading("Settings");
+                    });
+                    egui::TopBottomPanel::bottom("bottom_panel").show(&ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            if ui.button("Save").clicked() {
+                                if let Err(e) =
+                                    fs::write(SETTINGS_FILE, self.settings.to_string())
+                                {
+                                    self.gui_state
+                                        .errors
+                                        .push(format!("Failed to save settings: {}", e));
+                                } else {
+                                    self.gui_state
+                                        .errors
+                                        .push("Settings saved".to_string());
+                                }
+                            }
+                            if ui.button("Back").clicked() {
+                                self.gui_state.menu_stack.pop();
+                            }
+                        });
+                    });
+                    egui::CentralPanel::default()
+                        .frame(Frame::new().inner_margin(PADDING))
+                        .show(&ctx, |ui| {
+                            egui::ScrollArea::vertical().show(ui, |ui| {
+                                Probe::new(&mut self.settings).show(ui);
                             });
                         });
                 }

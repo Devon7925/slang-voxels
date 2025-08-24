@@ -5,7 +5,7 @@ use egui::{
 };
 use itertools::Itertools;
 
-use crate::{card_system::{Ability, BaseCard, Cooldown, CooldownModifier, DirectionCard, DragableCard, Effect, Keybind, MultiCastModifier, PassiveCard, ProjectileModifier, SignedSimpleCooldownModifier, SimpleCooldownModifier, SimpleProjectileModifierType, SimpleStatusEffectType, StatusEffect, UnsignedSimpleStatusEffectType, VoxelMaterial}, gui::{darken, GuiState}, settings_manager::Control, utils::{translate_egui_key_code, translate_egui_pointer_button}};
+use crate::{card_system::{Ability, BaseCard, Cooldown, CooldownModifier, DirectionCard, DragableCard, Effect, Keybind, MultiCastModifier, PassiveCard, ProjectileModifier, SignedSimpleCooldownModifier, SimpleCooldownModifier, SimpleProjectileModifierType, SimpleStatusEffectType, StatusEffect, UnsignedSimpleStatusEffectType, VoxelMaterial}, gui::{darken, GuiState, PADDING}, settings_manager::Control, utils::{translate_egui_key_code, translate_egui_pointer_button}};
 
 const ID_SOURCE: &str = "card_editor";
 
@@ -2242,8 +2242,6 @@ pub fn card_editor(
     gui_state: &mut GuiState,
     // game: &mut Option<Game>
 ) {
-    const PADDING: f32 = 10.0;
-    
     egui::CentralPanel::default()
     .frame(Frame::new().inner_margin(PADDING))
         .show(&ctx, |ui| {
