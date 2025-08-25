@@ -49,12 +49,6 @@ pub enum PaletteState {
     Dock,
 }
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct DndBox {
-    label: String,
-    items: Vec<DndBox>,
-}
-
 pub fn dnd_drag_source<Payload, R>(
     ui: &mut Ui,
     id: Id,
@@ -222,23 +216,23 @@ impl DrawableCard for Cooldown {
                 path.pop();
             });
         });
-            if matches!(edit_mode, EditMode::FullEditing) {
-                // allocate_ui_at_rect now takes a closure; run the UI code inside
-                // that closure so it receives the inner Ui to operate on.
-                let inner = ui.allocate_ui_at_rect(
-                    response.response.rect.shrink(CARD_UI_SPACING),
-                    |x_ui: &mut Ui| {
-                        x_ui.with_layout(Layout::right_to_left(egui::Align::Min), |x_ui| {
-                            x_ui.visuals_mut().widgets.inactive.bg_stroke =
-                                Stroke::new(0.5, Color32::from_rgb(255, 255, 255));
-                            if x_ui.button("X").clicked() {
-                                *modify_path = Some((path.clone(), ModificationType::Remove));
-                            }
-                        });
-                    },
-                );
-                let _ = inner; // ignore the response wrapper
-            }
+
+        // Draw X button for deleting cooldown
+        if matches!(edit_mode, EditMode::FullEditing) {
+            ui.scope_builder(
+                UiBuilder::new()
+                    .max_rect(response.response.rect.shrink(CARD_UI_SPACING)),
+                |ui: &mut Ui| {
+                    ui.with_layout(Layout::right_to_left(egui::Align::Min), |x_ui| {
+                        x_ui.visuals_mut().widgets.inactive.bg_stroke =
+                            Stroke::new(0.5, Color32::from_rgb(255, 255, 255));
+                        if x_ui.button("X").clicked() {
+                            *modify_path = Some((path.clone(), ModificationType::Remove));
+                        }
+                    });
+                },
+            );
+        }
 
         if let Some(drop_result) = payload {
             dnd_path.get_or_insert((drop_result.as_ref().clone(), Location {
@@ -552,7 +546,7 @@ impl DrawableCard for PassiveCard {
                 darken(ui.visuals_mut().widgets.inactive.bg_stroke.color, 0.25);
 
             let frame = Frame::default().inner_margin(CARD_UI_SPACING);
-            let (response, payload) = ui.dnd_drop_zone::<Location, _>(frame, |ui| {
+            let (_, payload) = ui.dnd_drop_zone::<Location, _>(frame, |ui| {
                 let mut advanced_effects = vec![];
                 ui.horizontal(|ui| {
                     ui.add_space(CARD_UI_SPACING);

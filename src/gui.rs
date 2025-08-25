@@ -132,59 +132,6 @@ pub fn horizontal_centerer(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
 //     })
 // }
 
-// Helper approximations for modern egui drag checks. The old API exposed
-// Memory::is_being_dragged/is_anything_being_dragged which changed; here we
-// approximate by checking stored temp data and pointer state. This keeps the
-// rest of the GUI logic similar while avoiding private Memory APIs.
-fn is_item_being_dragged(ui: &Ui, id: Id) -> bool {
-    // We previously stored a temp rect for draggable items each frame. If that
-    // temp exists and the pointer is down, treat the item as being dragged.
-    let has_prev: bool = ui.data(|d| d.get_temp::<Rect>(id)).is_some();
-    let pointer_down = ui.input(|i| i.pointer.primary_down());
-    has_prev && pointer_down
-}
-
-fn is_anything_being_dragged(ui: &Ui) -> bool {
-    // Approximate "anything being dragged" by whether the pointer is down.
-    // This is a simplification but matches the UI's needs (visual feedback
-    // while a drag-like interaction is happening).
-    ui.input(|i| i.pointer.primary_down())
-}
-
-// Map egui key to the project's KeyCode. We only need a subset used by the
-// UI keybind editor; map common printable keys and fallback to a best-effort
-// mapping for others.
-fn translate_egui_key_code(key: egui::Key) -> winit::keyboard::KeyCode {
-    use egui::Key;
-    use winit::keyboard::KeyCode;
-    match key {
-        Key::Escape => KeyCode::Escape,
-        Key::Tab => KeyCode::Tab,
-        Key::Enter => KeyCode::Enter,
-        Key::Space => KeyCode::Space,
-        Key::Backspace => KeyCode::Backspace,
-        Key::ArrowDown => KeyCode::ArrowDown,
-        Key::ArrowLeft => KeyCode::ArrowLeft,
-        Key::ArrowRight => KeyCode::ArrowRight,
-        Key::ArrowUp => KeyCode::ArrowUp,
-        // For keys we don't explicitly map, return Escape as a harmless
-        // default so the function remains total. A better mapping could be
-        // added later if needed.
-        _ => KeyCode::Escape,
-    }
-}
-
-fn translate_egui_pointer_button(button: egui::PointerButton) -> winit::event::MouseButton {
-    use egui::PointerButton;
-    use winit::event::MouseButton;
-    match button {
-        PointerButton::Primary => MouseButton::Left,
-        PointerButton::Secondary => MouseButton::Right,
-        PointerButton::Middle => MouseButton::Middle,
-        _ => MouseButton::Other(0),
-    }
-}
-
 // fn cooldown_ui(ui: &mut egui::Ui, ability: &PlayerAbility, ability_idx: usize) -> egui::Response {
 //     let desired_size = ui.spacing().interact_size.y * egui::vec2(3.0, 3.0);
 //     let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
