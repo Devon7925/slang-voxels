@@ -97,7 +97,7 @@ void init_available(uint3 dispatchThreadId: SV_DispatchThreadID)
 {
     if (dispatchThreadId.x >= MAX_CHUNKS - RESERVED_CHUNKS)
         return;
-    availableChunks[dispatchThreadId.x] = dispatchThreadId.x + 1;
+    availableChunks[dispatchThreadId.x] = dispatchThreadId.x + RESERVED_CHUNKS;
 }
 
 int3 get_chunk_pos_of_global_pos(int3 global_pos)
@@ -176,26 +176,25 @@ void load_chunk(int3 chunk_pos)
         return;
     let checkChunkIdx = floorMod(chunk_pos, RENDER_SIZE);
     let chunk_idx = 8 * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + checkChunkIdx.x + checkChunkIdx.y * RENDER_SIZE_X + checkChunkIdx.z * RENDER_SIZE_X * RENDER_SIZE_Y;
-    let updateCheckIdx = gameData[0].currentChunkLoads.load();
-    if (updateCheckIdx >= MAX_CHUNK_LOADS)
+    let was_already_queued = updatedChunks[chunk_idx].increment();
+    if (was_already_queued >= 1)
     {
+        updatedChunks[chunk_idx].decrement();
         return;
     }
-    let was_already_queued = updatedChunks[chunk_idx].exchange(1);
-    if (was_already_queued == 1)
-    {
-        return;
-    }
-    let availableChunk = gameData[0].chunksAvailable.sub(1);
-    let chunk = availableChunks[availableChunk - 1];
     let chunkLoadIdx = gameData[0].currentChunkLoads.increment();
     if (chunkLoadIdx >= MAX_CHUNK_LOADS)
     {
-        updatedChunks[chunk_idx].store(0);
-        let availableChunk = gameData[0].chunksAvailable.increment();
-        availableChunks[availableChunk] = chunk;
+        updatedChunks[chunk_idx].decrement();
         return;
     }
+    let availableChunkIdx = gameData[0].chunksAvailable.decrement() - 1;
+    if (availableChunkIdx < 0) {
+        updatedChunks[chunk_idx].decrement();
+        gameData[0].chunksAvailable.increment();
+        return;
+    }
+    let chunk = availableChunks[availableChunkIdx];
     chunkLoads[chunkLoadIdx] = int4(chunk_pos, chunk);
 }
 
