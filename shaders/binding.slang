@@ -186,11 +186,13 @@ void load_chunk(int3 chunk_pos)
     if (chunkLoadIdx >= MAX_CHUNK_LOADS)
     {
         updatedChunks[chunk_idx].decrement();
+        gameData[0].currentChunkLoads.decrement();
         return;
     }
     let availableChunkIdx = gameData[0].chunksAvailable.decrement() - 1;
     if (availableChunkIdx < 0) {
         updatedChunks[chunk_idx].decrement();
+        gameData[0].currentChunkLoads.decrement();
         gameData[0].chunksAvailable.increment();
         return;
     }
