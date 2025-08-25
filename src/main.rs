@@ -125,7 +125,7 @@ struct App {
     player_input: playground_module::PlayerInput,
     #[cfg(target_arch = "wasm32")]
     state_receiver: Option<futures::channel::oneshot::Receiver<RenderData>>,
-    compilation: Option<CompilationResult>,
+    compilation: CompilationResult,
     surface_format: wgpu::TextureFormat,
     settings: Settings,
     gui_state: GuiState,
@@ -174,7 +174,7 @@ impl App {
             },
             #[cfg(target_arch = "wasm32")]
             state_receiver: None,
-            compilation: Some(compilation),
+            compilation,
             surface_format: wgpu::TextureFormat::Rgba8Unorm,
             settings,
             gui_state,
@@ -314,7 +314,7 @@ impl App {
                                                 self.gui_state.menu_stack.clear();
                                                 self.game =
                                                     Some(pollster::block_on(Renderer::new(
-                                                        self.compilation.clone().unwrap(),
+                                                        self.compilation.clone(),
                                                         window_size,
                                                         device.clone(),
                                                         queue.clone(),
@@ -445,7 +445,7 @@ impl App {
                                             };
                                             println!("new lobby id: {}", new_lobby_id);
                                             self.game = Some(pollster::block_on(Renderer::new(
-                                                self.compilation.clone().unwrap(),
+                                                self.compilation.clone(),
                                                 window_size,
                                                 device.clone(),
                                                 queue.clone(),
@@ -594,7 +594,7 @@ impl App {
                                                                             .menu_stack
                                                                             .clear();
                                                                         self.game = Some(pollster::block_on(Renderer::new(
-                                                                            self.compilation.clone().unwrap(),
+                                                                            self.compilation.clone(),
                                                                             window_size,
                                                                             device.clone(),
                                                                             queue.clone(),
