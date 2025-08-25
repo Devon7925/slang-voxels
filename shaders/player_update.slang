@@ -444,7 +444,7 @@ void update(uint2 dispatchThreadId: SV_DispatchThreadID)
             {
                 let checkChunk = cameraChunk + int3(x, y, z);
                 let checkChunkIdx = floorMod(checkChunk, RENDER_SIZE);
-                if (chunks.Load(checkChunkIdx) == 0)
+                if (chunks.Load(checkChunkIdx) == UNLOADED_CHUNK)
                 {
                     load_chunk(checkChunk);
                 }

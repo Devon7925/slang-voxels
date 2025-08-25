@@ -28,5 +28,14 @@ The web build should then be accessible from `index.html`. To see the current we
 * Player rendering
 * Multiplayer
 * GameSettings
-* Game modes
+  * delta_time
+  * render_size
+  * game_mode
+  * max_loaded_chunks
+  * max_worldgen_rate
+  * max_update_rate
+  * world_gen
 * GUI notifications
+* Unloaded Air chunks
+  * Auto forceload when necessary
+  * Propogate chunk loading thru chunk

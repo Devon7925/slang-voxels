@@ -42,8 +42,10 @@ struct Player
     uint has_world_collision;
 };
 
-extension Player {
-    static Player default() {
+extension Player
+{
+    static Player default()
+    {
         return Player(
             float3(10.0, 100.0, 10.0),
             float4(0.0, 0.0, 0.0, 1.0),
@@ -87,6 +89,9 @@ static const Hitsphere HITSPHERES[] = {
 static const float3 PLAYER_HITBOX_OFFSET = float3(0.0, -2.0, 0.0);
 static const float3 PLAYER_HITBOX_SIZE = float3(1.8, 4.8, 1.8);
 static const float PLAYER_DENSITY = 3.8;
+
+static const uint UNLOADED_CHUNK = 0;
+static const uint UNLOADED_AIR_CHUNK = 1;
 
 static const uint MAT_AIR = 0;
 static const uint MAT_STONE = 1;
@@ -288,11 +293,13 @@ uint get_dist(uint voxel_data, uint offset)
     return (voxel_data >> (offset * 3)) & 0x7;
 }
 
-vector<int, N> floorDiv<let N: int>(vector<int, N> a, vector<int, N> b) {
+vector<int, N> floorDiv<let N : int>(vector<int, N> a, vector<int, N> b)
+{
     return (a / b) - ((a % b) != 0 && (a < 0));
 }
 
-vector<int, N> floorMod<let N : int>(vector<int, N> a, vector<int, N> b) {
+vector<int, N> floorMod<let N : int>(vector<int, N> a, vector<int, N> b)
+{
     vector<int, N> mod = a % b;
     return select(mod < 0, mod + abs(b), mod);
 }
