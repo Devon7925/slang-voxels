@@ -37,9 +37,6 @@ RWStructuredBuffer<int> availableChunks;
 [playground::ZEROS(MAX_CHUNK_LOADS)]
 RWStructuredBuffer<int4> chunkLoads;
 
-[playground::ZEROS(9 * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z)]
-RWStructuredBuffer<Atomic<uint>> updatedChunks;
-
 [playground::ZEROS(8 * MAX_CHUNK_UPDATES)]
 RWStructuredBuffer<int3> chunkUpdates;
 
@@ -72,6 +69,8 @@ uniform GraphicsSettings graphicsSettings;
 
 struct GameData
 {
+    Atomic<int>[8 * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z] chunkUpdateCounts;
+    Atomic<int>[RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z] chunkLoadCounts;
     float4 prevMouse;
     int voxelOffset;
     int3 startPos;
@@ -146,21 +145,23 @@ int3 get_voxel_ptr_of_global_pos(int3 global_pos)
 void unload_chunk(int3 chunk_pos)
 {
     let chunk_ptr = get_chunk_ptr_of_chunk_pos(chunk_pos);
-    let chunk_idx = chunks.Load(chunk_ptr);
-    if (chunk_idx != UNLOADED_CHUNK)
+    let voxel_data_idx = chunks.Load(chunk_ptr);
+    if (voxel_data_idx != UNLOADED_CHUNK)
     {
         chunks.Store(chunk_ptr, UNLOADED_CHUNK);
     }
-    if (chunk_idx < RESERVED_CHUNKS)
+    if (voxel_data_idx < RESERVED_CHUNKS)
         return;
     let availableChunkIdx = gameData[0].chunksAvailable.increment();
-    availableChunks[availableChunkIdx] = chunk_idx;
+    availableChunks[availableChunkIdx] = voxel_data_idx;
 
-    for (var i = 0; i < 9; i++)
+    let chunk_idx = chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
+    for (var i = 0; i < 8; i++)
     {
-        let chunk_idx = i * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
-        updatedChunks[chunk_idx].exchange(0);
+        let chunk_idx = i * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_idx;
+        gameData[0].chunkUpdateCounts[chunk_idx].store(0);
     }
+    gameData[0].chunkLoadCounts[chunk_idx].store(0);
 }
 
 bool chunk_in_bounds(int3 chunk_pos)
@@ -178,24 +179,24 @@ void load_chunk(int3 chunk_pos)
     if (!chunk_in_bounds(chunk_pos))
         return;
     let checkChunkIdx = floorMod(chunk_pos, RENDER_SIZE);
-    let chunk_idx = 8 * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + checkChunkIdx.x + checkChunkIdx.y * RENDER_SIZE_X + checkChunkIdx.z * RENDER_SIZE_X * RENDER_SIZE_Y;
-    let was_already_queued = updatedChunks[chunk_idx].increment();
+    let chunk_idx = checkChunkIdx.x + checkChunkIdx.y * RENDER_SIZE_X + checkChunkIdx.z * RENDER_SIZE_X * RENDER_SIZE_Y;
+    let was_already_queued = gameData[0].chunkLoadCounts[chunk_idx].increment();
     if (was_already_queued >= 1)
     {
-        updatedChunks[chunk_idx].decrement();
+        gameData[0].chunkLoadCounts[chunk_idx].decrement();
         return;
     }
     let chunkLoadIdx = gameData[0].currentChunkLoads.increment();
     if (chunkLoadIdx >= MAX_CHUNK_LOADS)
     {
-        updatedChunks[chunk_idx].decrement();
+        gameData[0].chunkLoadCounts[chunk_idx].decrement();
         gameData[0].currentChunkLoads.decrement();
         return;
     }
     let availableChunkIdx = gameData[0].chunksAvailable.decrement() - 1;
     if (availableChunkIdx < 0)
     {
-        updatedChunks[chunk_idx].decrement();
+        gameData[0].chunkLoadCounts[chunk_idx].decrement();
         gameData[0].currentChunkLoads.decrement();
         gameData[0].chunksAvailable.increment();
         return;
@@ -222,21 +223,16 @@ void queue_update_all(int3 chunk_pos)
     for (var chunk_update_type = 0; chunk_update_type < 8; chunk_update_type++)
     {
         let update_idx = get_update_index_of_chunk_ptr(chunk_update_type, chunk_ptr);
-        let typed_update_count = gameData[0].currentChunkUpdates[chunk_update_type].load();
-        if (typed_update_count >= MAX_CHUNK_UPDATES)
-        {
-            continue;
-        }
-        let was_already_queued = updatedChunks[update_idx].increment();
+        let was_already_queued = gameData[0].chunkUpdateCounts[update_idx].increment();
         if (was_already_queued >= 1)
         {
-            updatedChunks[update_idx].decrement();
+            gameData[0].chunkUpdateCounts[update_idx].decrement();
             continue;
         }
         let typed_update_idx = gameData[0].currentChunkUpdates[chunk_update_type].increment();
         if (typed_update_idx >= MAX_CHUNK_UPDATES)
         {
-            updatedChunks[update_idx].decrement();
+            gameData[0].chunkUpdateCounts[update_idx].decrement();
             gameData[0].currentChunkUpdates[chunk_update_type].decrement();
             continue;
         }

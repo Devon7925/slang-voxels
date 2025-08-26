@@ -12,7 +12,7 @@ void voxelUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
 
     let chunk_ptr = floorMod(chunk, RENDER_SIZE);
     let chunk_idx = gameData[0].voxelOffset * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
-    updatedChunks[chunk_idx].store(0);
+    gameData[0].chunkUpdateCounts[chunk_idx].store(0);
     if (!chunk_in_bounds(chunk))
     {
         return;

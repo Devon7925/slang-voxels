@@ -118,8 +118,8 @@ void worldgen_setup(uint3 dispatchThreadId: SV_DispatchThreadID)
     let chunk_location = chunkLoads[dispatchThreadId.x].xyz;
 
     let chunk_ptr = floorMod(chunk_location, RENDER_SIZE);
-    let chunk_idx = 8 * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
-    updatedChunks[chunk_idx].store(0);
+    let chunk_idx = chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
+    gameData[0].chunkLoadCounts[chunk_idx].decrement();
 }
 
 [numthreads(4, 4, 4)]
@@ -141,17 +141,11 @@ void worldgen(uint3 dispatchThreadId: SV_DispatchThreadID)
     uint data = get_worldgen(pos);
     voxels.Store(CHUNK_SIZE * chunk_loc + floorMod(pos, CHUNK_SIZE), data);
 
-    // Track whether any voxel in this chunk is air. We reuse the "slot" at
-    // index (8 * RENDER_SIZE_VOLUME + chunk_ptr_index) in updatedChunks as a
-    // per-chunk atomic counter. It is zeroed by worldgen_setup before
-    // generation. If it remains zero after generation completes, the chunk is
-    // entirely air and can be unallocated and referenced as
-    // UNLOADED_AIR_CHUNK.
     let chunk_ptr = floorMod(chunk_location, RENDER_SIZE);
-    let perChunkIdx = 8 * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
+    let perChunkIdx = chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
     if ((data >> 24) == MAT_AIR)
     {
-        updatedChunks[perChunkIdx].increment();
+        gameData[0].chunkLoadCounts[perChunkIdx].increment();
     }
 }
 
@@ -167,11 +161,12 @@ void worldgen_cleanup(uint3 dispatchThreadId: SV_DispatchThreadID)
     }
 
     let chunk_ptr = floorMod(chunk_location, RENDER_SIZE);
-    let chunk_idx = 8 * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
+    let chunk_idx = chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
     // If all air voxels were written into this chunk, free the
     // allocation and mark the chunk as an unloaded-air chunk so the
     // system can reuse its voxel memory.
-    if (updatedChunks[chunk_idx].load() == CHUNK_VOLUME)
+    let airCount = gameData[0].chunkLoadCounts[chunk_idx].exchange(0);
+    if (airCount == CHUNK_VOLUME)
     {
         // Return the allocation to the available list and mark the chunk
         // pointer as UNLOADED_AIR_CHUNK.
@@ -186,5 +181,4 @@ void worldgen_cleanup(uint3 dispatchThreadId: SV_DispatchThreadID)
         // Queue updates for this chunk
         queue_update_all(chunk_location);
     }
-    updatedChunks[chunk_idx].store(0);
 }
