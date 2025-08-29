@@ -36,9 +36,35 @@ RWTexture3D<uint> voxels;
 [playground::ZEROS(MAX_CHUNKS - RESERVED_CHUNKS)]
 RWStructuredBuffer<int> availableChunks;
 
-[playground::ZEROS(MAX_CHUNK_LOADS)]
-RWStructuredBuffer<int4> chunkLoads;
+struct ChunkLoadRequest
+{
+    int3 chunk_pos;
+    int chunk_ptr;
 
+    __init(int3 set_chunk_pos, int set_chunk_ptr, bool is_forced) {
+        chunk_pos = set_chunk_pos;
+        chunk_ptr = set_chunk_ptr;
+        if (is_forced)
+        {
+            chunk_ptr *= -1;
+        }
+    }
+
+    int3 get_chunk_pos() {
+        return chunk_pos;
+    }
+
+    int get_chunk_ptr() {
+        return abs(chunk_ptr);
+    }
+
+    bool get_is_forced() {
+        return chunk_ptr < 0;
+    }
+}
+
+[playground::ZEROS(MAX_CHUNK_LOADS)]
+RWStructuredBuffer<ChunkLoadRequest> chunkLoads;
 [playground::ZEROS(8 * MAX_CHUNK_UPDATES)]
 RWStructuredBuffer<int3> chunkUpdates;
 
@@ -197,7 +223,7 @@ bool chunk_in_bounds(int3 chunk_pos)
     return true;
 }
 
-void load_chunk(int3 chunk_pos)
+void load_chunk(int3 chunk_pos, bool is_forced)
 {
     if (!chunk_in_bounds(chunk_pos))
         return;
@@ -225,7 +251,7 @@ void load_chunk(int3 chunk_pos)
         return;
     }
     let chunk = availableChunks[availableChunkIdx];
-    chunkLoads[chunkLoadIdx] = int4(chunk_pos, chunk);
+    chunkLoads[chunkLoadIdx] = ChunkLoadRequest(chunk_pos, chunk, is_forced);
 }
 
 void queue_update_all(int3 chunk_pos)
@@ -236,7 +262,7 @@ void queue_update_all(int3 chunk_pos)
     let voxel_data_ptr = chunks.Load(chunk_ptr);
     if (voxel_data_ptr == UNLOADED_CHUNK)
     {
-        load_chunk(chunk_pos);
+        load_chunk(chunk_pos, false);
         return;
     }
     if (voxel_data_ptr < RESERVED_CHUNKS)
@@ -336,8 +362,13 @@ void set_data(int3 global_pos, uint data)
     uint og_voxel_data = get_data(global_pos);
     if (og_voxel_data >> 24 == MAT_OOB)
         return;
-    if (og_voxel_data >> 24 == MAT_AIR_OOB)
+    if (og_voxel_data >> 24 == MAT_AIR_OOB) {
+        if (data >> 24 == MAT_AIR || data >> 24 == MAT_AIR_OOB) {
+            return;
+        }
+        load_chunk(get_chunk_pos_of_global_pos(global_pos), true);
         return;
+    }
     if (og_voxel_data != data)
     {
         let chunk_pos = get_chunk_pos_of_global_pos(global_pos);

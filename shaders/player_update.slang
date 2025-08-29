@@ -452,7 +452,7 @@ void update_player(uint2 dispatchThreadId: SV_DispatchThreadID)
                 let checkChunkIdx = floorMod(checkChunk, RENDER_SIZE);
                 if (chunks.Load(checkChunkIdx) == UNLOADED_CHUNK)
                 {
-                    load_chunk(checkChunk);
+                    load_chunk(checkChunk, false);
                 }
             }
         }
