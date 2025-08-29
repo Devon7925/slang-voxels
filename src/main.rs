@@ -811,6 +811,48 @@ impl App {
                 }
             }
 
+            
+            let corner_offset = 10.0;
+            egui::Area::new("errors".into())
+                .order(Order::Foreground)
+                .anchor(
+                    Align2::RIGHT_BOTTOM,
+                    Vec2::new(-corner_offset, -corner_offset),
+                )
+                .show(&ctx, |ui| {
+                    let mut errors_to_remove = vec![];
+                    for (err_idx, error) in self.gui_state.errors.iter().enumerate() {
+                        egui::Frame {
+                            inner_margin: Margin {
+                                left: 4,
+                                right: 4,
+                                top: 4,
+                                bottom: 4,
+                            },
+                            ..Default::default()
+                        }
+                        .stroke(ui.visuals().widgets.noninteractive.bg_stroke)
+                        .fill(Color32::BLACK)
+                        .corner_radius(ui.visuals().widgets.noninteractive.corner_radius)
+                        .show(ui, |ui| {
+                            ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+                            ui.horizontal(|ui| {
+                                ui.label(egui::RichText::new(error).color(egui::Color32::WHITE));
+                                if ui
+                                    .button("X")
+                                    .on_hover_cursor(egui::CursorIcon::PointingHand)
+                                    .clicked()
+                                {
+                                    errors_to_remove.push(err_idx);
+                                }
+                            });
+                        });
+                    }
+                    for err_idx in errors_to_remove.iter().rev() {
+                        self.gui_state.errors.remove(*err_idx);
+                    }
+                });
+
             render_data.egui_renderer.end_frame_and_draw(
                 &render_data.device,
                 &render_data.queue,

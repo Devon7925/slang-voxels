@@ -35,5 +35,4 @@ The web build should then be accessible from `index.html`. To see the current we
   * max_worldgen_rate
   * max_update_rate
   * world_gen
-* GUI notifications
 * Deck picker
