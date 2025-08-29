@@ -77,7 +77,7 @@ void voxelUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
         {
             uint bottom_voxel = pos_data[i][0][k].x;
             uint top_voxel = pos_data[i][1][k].x;
-            if (bottom_voxel == MAT_AIR && top_voxel == MAT_WATER)
+            if (physics_properties[bottom_voxel].is_fluid && physics_properties[top_voxel].is_fluid && physics_properties[top_voxel].weight_class > physics_properties[bottom_voxel].weight_class)
             {
                 pos_data[i][0][k] = uint2(top_voxel, 0);
                 pos_data[i][1][k] = uint2(bottom_voxel, 0);
@@ -91,7 +91,7 @@ void voxelUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
         {
             uint bottom_voxel = pos_data[1 - i][0][k].x;
             uint top_voxel = pos_data[i][1][k].x;
-            if (bottom_voxel == MAT_AIR && top_voxel == MAT_WATER)
+            if (physics_properties[bottom_voxel].is_fluid && physics_properties[top_voxel].is_fluid && physics_properties[top_voxel].weight_class > physics_properties[bottom_voxel].weight_class)
             {
                 pos_data[1 - i][0][k] = uint2(top_voxel, 0);
                 pos_data[i][1][k] = uint2(bottom_voxel, 0);
@@ -105,7 +105,7 @@ void voxelUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
         {
             uint bottom_voxel = pos_data[i][0][1 - k].x;
             uint top_voxel = pos_data[i][1][k].x;
-            if (bottom_voxel == MAT_AIR && top_voxel == MAT_WATER)
+            if (physics_properties[bottom_voxel].is_fluid && physics_properties[top_voxel].is_fluid && physics_properties[top_voxel].weight_class > physics_properties[bottom_voxel].weight_class)
             {
                 pos_data[i][0][1 - k] = uint2(top_voxel, 0);
                 pos_data[i][1][k] = uint2(bottom_voxel, 0);
@@ -117,7 +117,7 @@ void voxelUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
     {
         uint to_voxel = pos_data[pos.y % 2][1][i].x;
         uint from_voxel = pos_data[(1 + pos.y) % 2][1][i].x;
-        if (from_voxel == MAT_WATER && to_voxel == MAT_AIR)
+        if (physics_properties[to_voxel].is_fluid && physics_properties[from_voxel].is_fluid && physics_properties[from_voxel].weight_class > physics_properties[to_voxel].weight_class)
         {
             pos_data[pos.y % 2][1][i] = uint2(from_voxel, 0);
             pos_data[(1 + pos.y) % 2][1][i] = uint2(to_voxel, 0);
@@ -128,7 +128,7 @@ void voxelUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
     {
         uint to_voxel = pos_data[i][1][pos.y % 2].x;
         uint from_voxel = pos_data[i][1][(1 + pos.y) % 2].x;
-        if (from_voxel == MAT_WATER && to_voxel == MAT_AIR)
+        if (physics_properties[to_voxel].is_fluid && physics_properties[from_voxel].is_fluid && physics_properties[from_voxel].weight_class > physics_properties[to_voxel].weight_class)
         {
             pos_data[i][1][pos.y % 2] = uint2(from_voxel, 0);
             pos_data[i][1][(1 + pos.y) % 2] = uint2(to_voxel, 0);

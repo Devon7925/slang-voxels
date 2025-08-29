@@ -338,7 +338,7 @@ void setReservedChunks(uint3 dispatchThreadId: SV_DispatchThreadID)
 int3 get_voxel_update_offset()
 {
     let idx = int(gameData[0].voxelOffset);
-    return int3(idx & 1, (idx >> 1) & 1, (idx >> 2) & 1);
+    return int3(idx & 1, -((idx >> 1) & 1), (idx >> 2) & 1);
 }
 
 uint get_data_unchecked(int3 global_pos)

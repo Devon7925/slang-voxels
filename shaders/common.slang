@@ -115,22 +115,23 @@ struct PhysicsProperties
     bool is_data_standard_distance;
     float friction;
     float density;
+    int weight_class;
 };
 
 static const PhysicsProperties physics_properties[] = {
-    PhysicsProperties(true, false, true, 0.0, 1.0),   // MAT_AIR
-    PhysicsProperties(false, true, false, 5.0, 1.0),  // MAT_STONE
-    PhysicsProperties(false, false, false, 0.0, 1.0), // MAT_OOB
-    PhysicsProperties(false, true, false, 5.0, 1.0),  // MAT_DIRT
-    PhysicsProperties(false, true, false, 5.0, 1.0),  // MAT_GRASS
-    PhysicsProperties(false, false, false, 0.0, 0.0), // MAT_PROJECTILE
-    PhysicsProperties(false, true, false, 0.1, 1.0),  // MAT_ICE
-    PhysicsProperties(true, false, true, 1.0, 4.4),   // MAT_WATER
-    PhysicsProperties(false, false, false, 0.0, 0.0), // MAT_PLAYER
-    PhysicsProperties(true, false, false, 0.0, 1.0),  // MAT_AIR_OOB
-    PhysicsProperties(false, true, false, 5.0, 1.0),  // MAT_WOOD
-    PhysicsProperties(false, false, true, 4.0, 1.0),  // MAT_LEAF
-    PhysicsProperties(false, false, false, 5.0, 1.0), // MAT_UNBREAKABLE
+    PhysicsProperties(true, false, true, 0.0, 1.0, 0),   // MAT_AIR
+    PhysicsProperties(false, true, false, 5.0, 1.0, 1),  // MAT_STONE
+    PhysicsProperties(false, false, false, 0.0, 1.0, 0), // MAT_OOB
+    PhysicsProperties(false, true, false, 5.0, 1.0, 1),  // MAT_DIRT
+    PhysicsProperties(false, true, false, 5.0, 1.0, 1),  // MAT_GRASS
+    PhysicsProperties(false, false, false, 0.0, 0.0, 1), // MAT_PROJECTILE
+    PhysicsProperties(false, true, false, 0.1, 1.0, 1),  // MAT_ICE
+    PhysicsProperties(true, false, true, 1.0, 4.4, 1),   // MAT_WATER
+    PhysicsProperties(false, false, false, 0.0, 0.0, 1), // MAT_PLAYER
+    PhysicsProperties(true, false, false, 0.0, 1.0, 0),  // MAT_AIR_OOB
+    PhysicsProperties(false, true, false, 5.0, 1.0, 1),  // MAT_WOOD
+    PhysicsProperties(false, false, true, 4.0, 1.0, 1),  // MAT_LEAF
+    PhysicsProperties(false, false, false, 5.0, 1.0, 1), // MAT_UNBREAKABLE
 };
 
 static const bool is_transparent[] = {
