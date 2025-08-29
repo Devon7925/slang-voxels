@@ -38,11 +38,16 @@ bool ray_vs_aabb(
 
     t = t_near;
 
-    if (t_near_vec.x > t_near_vec.y && t_near_vec.x > t_near_vec.z) {
+    if (t_near_vec.x > t_near_vec.y && t_near_vec.x > t_near_vec.z)
+    {
         normal = float3(-sign(ray_inv_dir.x), 0, 0);
-    } else if (t_near_vec.y > t_near_vec.x && t_near_vec.y > t_near_vec.z) {
+    }
+    else if (t_near_vec.y > t_near_vec.x && t_near_vec.y > t_near_vec.z)
+    {
         normal = float3(0, -sign(ray_inv_dir.y), 0);
-    } else {
+    }
+    else
+    {
         normal = float3(0, 0, -sign(ray_inv_dir.z));
     }
 
@@ -61,7 +66,8 @@ bool sweep_test(
     hit_material = 0;
     bool found_collision = false;
 
-    if (dot(move_vec, move_vec) < 1e-9) return false;
+    if (dot(move_vec, move_vec) < 1e-9)
+        return false;
 
     float3 player_center = player.pos.xyz + player.size * PLAYER_HITBOX_OFFSET;
     float3 player_half_size = player.size * PLAYER_HITBOX_SIZE * 0.5;
@@ -78,7 +84,8 @@ bool sweep_test(
             for (int z = min_voxel.z; z <= max_voxel.z; ++z)
             {
                 uint material_id = get_data(int3(x, y, z)) >> 24;
-                if (physics_properties[material_id].is_fluid) continue;
+                if (physics_properties[material_id].is_fluid)
+                    continue;
 
                 float3 expanded_voxel_min = float3(int3(x, y, z)) - player_half_size;
                 float3 expanded_voxel_max = float3(int3(x, y, z)) + float3(1, 1, 1) + player_half_size;
@@ -109,7 +116,8 @@ bool is_box_clear(float3 box_min, float3 box_max)
             for (int z = min_voxel.z; z <= max_voxel.z; ++z)
             {
                 uint material_id = get_data(int3(x, y, z)) >> 24;
-                if (!physics_properties[material_id].is_fluid) {
+                if (!physics_properties[material_id].is_fluid)
+                {
                     return false;
                 }
             }
@@ -185,7 +193,8 @@ void collide_player(inout Player player, int3 prev_collision_vec)
     const int MAX_SLIDES = 4;
     for (int i = 0; i < MAX_SLIDES; ++i)
     {
-        if (dot(move_total, move_total) < 1e-9) break;
+        if (dot(move_total, move_total) < 1e-9)
+            break;
 
         float collision_time = 1.0;
         float3 collision_normal;
@@ -225,7 +234,8 @@ void collide_player(inout Player player, int3 prev_collision_vec)
 
             // Stop velocity component that is moving into the wall.
             float vel_dot_normal = dot(player.vel, collision_normal);
-            if (vel_dot_normal < 0) {
+            if (vel_dot_normal < 0)
+            {
                 player.vel -= collision_normal * vel_dot_normal;
             }
         }
@@ -240,7 +250,7 @@ void collide_player(inout Player player, int3 prev_collision_vec)
 [playground::CALL::SIZE_OF("players")]
 [shader("compute")]
 [numthreads(1, 1, 1)]
-void update(uint2 dispatchThreadId: SV_DispatchThreadID)
+void update_player(uint2 dispatchThreadId: SV_DispatchThreadID)
 {
     uint entity_idx = dispatchThreadId.x;
     // if (entity_idx >= sim_data.player_count) return;
@@ -256,8 +266,7 @@ void update(uint2 dispatchThreadId: SV_DispatchThreadID)
         float3x3 yaw_matrix = float3x3(
             cos_yaw, 0, sin_yaw,
             0, 1, 0,
-            -sin_yaw, 0, cos_yaw
-        );
+            -sin_yaw, 0, cos_yaw);
         player.dir.xyz = mul(yaw_matrix, player.dir.xyz);
 
         // Pitch rotation (up/down)
@@ -268,8 +277,7 @@ void update(uint2 dispatchThreadId: SV_DispatchThreadID)
         float3x3 pitch_matrix = float3x3(
             cos_pitch + right_vec.x * right_vec.x * (1 - cos_pitch), right_vec.x * right_vec.y * (1 - cos_pitch) - right_vec.z * sin_pitch, right_vec.x * right_vec.z * (1 - cos_pitch) + right_vec.y * sin_pitch,
             right_vec.y * right_vec.x * (1 - cos_pitch) + right_vec.z * sin_pitch, cos_pitch + right_vec.y * right_vec.y * (1 - cos_pitch), right_vec.y * right_vec.z * (1 - cos_pitch) - right_vec.x * sin_pitch,
-            right_vec.z * right_vec.x * (1 - cos_pitch) - right_vec.y * sin_pitch, right_vec.z * right_vec.y * (1 - cos_pitch) + right_vec.x * sin_pitch, cos_pitch + right_vec.z * right_vec.z * (1 - cos_pitch)
-        );
+            right_vec.z * right_vec.x * (1 - cos_pitch) - right_vec.y * sin_pitch, right_vec.z * right_vec.y * (1 - cos_pitch) + right_vec.x * sin_pitch, cos_pitch + right_vec.z * right_vec.z * (1 - cos_pitch));
 
         float3 new_dir = mul(pitch_matrix, player.dir.xyz);
 
@@ -371,8 +379,6 @@ void update(uint2 dispatchThreadId: SV_DispatchThreadID)
         set_data(int3(floor(player.pos)), MAT_WATER << 24);
     }
 
-    gameData[0].voxelOffset = (gameData[0].voxelOffset + 1) % 8;
-
     let worldCenter = (gameData[0].startPos + RENDER_SIZE / 2);
     let cameraChunk = int3(floor(player.pos / CHUNK_SIZE));
     let playerOffset = (cameraChunk - worldCenter);
@@ -451,11 +457,4 @@ void update(uint2 dispatchThreadId: SV_DispatchThreadID)
             }
         }
     }
-    AllMemoryBarrier();
-    indirectBuffer[0] = CHUNK_SIZE / VOXEL_UPDATE_SIZE / 2 * gameData[0].currentChunkUpdates[gameData[0].voxelOffset].load();
-    indirectBuffer[4] = CHUNK_SIZE / 4 * gameData[0].currentChunkLoads.load();
-    indirectBuffer[8] = gameData[0].currentChunkLoads.load();
-
-    gameData[0].currentChunkUpdates[gameData[0].voxelOffset].store(0);
-    gameData[0].currentChunkLoads.store(0);
 }

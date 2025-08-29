@@ -5,6 +5,8 @@ import common;
 float time;
 [playground::MOUSE_POSITION]
 float4 mousePosition;
+[playground::FRAME_ID]
+uniform float frame_id;
 
 static const int RENDER_SIZE_X = 16;
 static const int RENDER_SIZE_Y = 8;
@@ -69,8 +71,8 @@ uniform GraphicsSettings graphicsSettings;
 
 struct GameData
 {
-    Atomic<int>[8 * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z] chunkUpdateCounts;
-    Atomic<int>[RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z] chunkLoadCounts;
+    Atomic<int>[8 * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z] chunkUpdateRequestCounts;
+    Atomic<int>[RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z] chunkLoadRequestCounts;
     float4 prevMouse;
     int voxelOffset;
     int3 startPos;
@@ -85,8 +87,37 @@ RWStructuredBuffer<GameData> gameData;
 [playground::ZEROS(1)]
 RWStructuredBuffer<Player> players;
 
-[playground::ZEROS(12)]
+[playground::ZEROS(16)]
 RWStructuredBuffer<uint> indirectBuffer;
+
+[playground::CALL(RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z, 1, 1)]
+[playground::CALL_ONCE]
+[shader("compute")]
+[numthreads(16, 1, 1)]
+void clearInitialUpdateCounts(uint3 dispatchThreadId: SV_DispatchThreadID)
+{
+    if (dispatchThreadId.x >= RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z)
+        return;
+    for (var i = 0; i < 8; i++)
+    {
+        gameData[0].chunkUpdateRequestCounts[dispatchThreadId.x + i * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z].store(0);
+    }
+    gameData[0].chunkLoadRequestCounts[dispatchThreadId.x].store(0);
+}
+
+[playground::CALL(MAX_CHUNK_UPDATES, 1, 1)]
+[playground::CALL_ONCE]
+[shader("compute")]
+[numthreads(16, 1, 1)]
+void clearInitialUpdates(uint3 dispatchThreadId: SV_DispatchThreadID)
+{
+    if (dispatchThreadId.x >= MAX_CHUNK_UPDATES)
+        return;
+    for (var i = 0; i < 8; i++)
+    {
+        chunkUpdates[dispatchThreadId.x + i * MAX_CHUNK_UPDATES] = int3(0, 0, 0);
+    }
+}
 
 [playground::CALL(MAX_CHUNKS, 1, 1)]
 [playground::CALL_ONCE]
@@ -154,14 +185,6 @@ void unload_chunk(int3 chunk_pos)
         return;
     let availableChunkIdx = gameData[0].chunksAvailable.increment();
     availableChunks[availableChunkIdx] = voxel_data_idx;
-
-    let chunk_idx = chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
-    for (var i = 0; i < 8; i++)
-    {
-        let chunk_idx = i * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_idx;
-        gameData[0].chunkUpdateCounts[chunk_idx].store(0);
-    }
-    gameData[0].chunkLoadCounts[chunk_idx].store(0);
 }
 
 bool chunk_in_bounds(int3 chunk_pos)
@@ -180,23 +203,23 @@ void load_chunk(int3 chunk_pos)
         return;
     let checkChunkIdx = floorMod(chunk_pos, RENDER_SIZE);
     let chunk_idx = checkChunkIdx.x + checkChunkIdx.y * RENDER_SIZE_X + checkChunkIdx.z * RENDER_SIZE_X * RENDER_SIZE_Y;
-    let was_already_queued = gameData[0].chunkLoadCounts[chunk_idx].increment();
+    let was_already_queued = gameData[0].chunkLoadRequestCounts[chunk_idx].increment();
     if (was_already_queued >= 1)
     {
-        gameData[0].chunkLoadCounts[chunk_idx].decrement();
+        gameData[0].chunkLoadRequestCounts[chunk_idx].decrement();
         return;
     }
     let chunkLoadIdx = gameData[0].currentChunkLoads.increment();
     if (chunkLoadIdx >= MAX_CHUNK_LOADS)
     {
-        gameData[0].chunkLoadCounts[chunk_idx].decrement();
+        gameData[0].chunkLoadRequestCounts[chunk_idx].decrement();
         gameData[0].currentChunkLoads.decrement();
         return;
     }
     let availableChunkIdx = gameData[0].chunksAvailable.decrement() - 1;
     if (availableChunkIdx < 0)
     {
-        gameData[0].chunkLoadCounts[chunk_idx].decrement();
+        gameData[0].chunkLoadRequestCounts[chunk_idx].decrement();
         gameData[0].currentChunkLoads.decrement();
         gameData[0].chunksAvailable.increment();
         return;
@@ -223,16 +246,16 @@ void queue_update_all(int3 chunk_pos)
     for (var chunk_update_type = 0; chunk_update_type < 8; chunk_update_type++)
     {
         let update_idx = get_update_index_of_chunk_ptr(chunk_update_type, chunk_ptr);
-        let was_already_queued = gameData[0].chunkUpdateCounts[update_idx].increment();
-        if (was_already_queued >= 1)
+        let prev_chunk_queue_request_count = gameData[0].chunkUpdateRequestCounts[update_idx].increment();
+        if (prev_chunk_queue_request_count > 0)
         {
-            gameData[0].chunkUpdateCounts[update_idx].decrement();
+            gameData[0].chunkUpdateRequestCounts[update_idx].decrement();
             continue;
         }
         let typed_update_idx = gameData[0].currentChunkUpdates[chunk_update_type].increment();
         if (typed_update_idx >= MAX_CHUNK_UPDATES)
         {
-            gameData[0].chunkUpdateCounts[update_idx].decrement();
+            gameData[0].chunkUpdateRequestCounts[update_idx].decrement();
             gameData[0].currentChunkUpdates[chunk_update_type].decrement();
             continue;
         }
@@ -261,6 +284,10 @@ void setup(uint3 dispatchThreadId: SV_DispatchThreadID)
     indirectBuffer[8] = 0;
     indirectBuffer[9] = 1;
     indirectBuffer[10] = 1;
+
+    indirectBuffer[12] = 0;
+    indirectBuffer[13] = 1;
+    indirectBuffer[14] = 1;
 
     gameData[0].startPos = int3(0);
     gameData[0].chunksAvailable.store(MAX_CHUNKS - RESERVED_CHUNKS);

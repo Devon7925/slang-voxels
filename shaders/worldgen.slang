@@ -111,6 +111,17 @@ uint get_worldgen(int3 global_pos)
     return MAT_AIR << 24;
 }
 
+[playground::CALL(1, 1, 1)]
+[shader("compute")]
+[numthreads(1, 1, 1)]
+void worldgen_update_setup(uint2 dispatchThreadId: SV_DispatchThreadID)
+{
+    let currentLoadCount = gameData[0].currentChunkLoads.exchange(0);
+
+    indirectBuffer[4] = CHUNK_SIZE / 4 * currentLoadCount;
+    indirectBuffer[8] = currentLoadCount;
+}
+
 [numthreads(1, 1, 1)]
 [playground::CALL_INDIRECT("indirectBuffer", 32)]
 void worldgen_setup(uint3 dispatchThreadId: SV_DispatchThreadID)
@@ -119,7 +130,7 @@ void worldgen_setup(uint3 dispatchThreadId: SV_DispatchThreadID)
 
     let chunk_ptr = floorMod(chunk_location, RENDER_SIZE);
     let chunk_idx = chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
-    gameData[0].chunkLoadCounts[chunk_idx].decrement();
+    gameData[0].chunkLoadRequestCounts[chunk_idx].decrement();
 }
 
 [numthreads(4, 4, 4)]
@@ -145,7 +156,7 @@ void worldgen(uint3 dispatchThreadId: SV_DispatchThreadID)
     let perChunkIdx = chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
     if ((data >> 24) == MAT_AIR)
     {
-        gameData[0].chunkLoadCounts[perChunkIdx].increment();
+        gameData[0].chunkLoadRequestCounts[perChunkIdx].increment();
     }
 }
 
@@ -165,7 +176,7 @@ void worldgen_cleanup(uint3 dispatchThreadId: SV_DispatchThreadID)
     // If all air voxels were written into this chunk, free the
     // allocation and mark the chunk as an unloaded-air chunk so the
     // system can reuse its voxel memory.
-    let airCount = gameData[0].chunkLoadCounts[chunk_idx].exchange(0);
+    let airCount = gameData[0].chunkLoadRequestCounts[chunk_idx].exchange(0);
     if (airCount == CHUNK_VOLUME)
     {
         // Return the allocation to the available list and mark the chunk

@@ -823,6 +823,7 @@ impl App {
 
         render_data.queue.submit([encoder.finish()]);
         if let Some(game) = self.game.as_mut() {
+            game.schedule_print_readback();
             game.handle_print_output();
         }
         surface_texture.present();

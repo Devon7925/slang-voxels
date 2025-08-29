@@ -315,9 +315,9 @@ checksum = "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7"
 
 [[package]]
 name = "bit_field"
-version = "0.10.2"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc827186963e592360843fb5ba4b973e145841266c1357f7180c43526f2e5b61"
+checksum = "1e4b40c7323adcfc0a41c4b88143ed58346ff65a288fc144329c5c45e05d70c6"
 
 [[package]]
 name = "bitflags"
@@ -1191,7 +1191,7 @@ dependencies = [
  "js-sys",
  "libc",
  "r-efi",
- "wasi 0.14.2+wasi-0.2.4",
+ "wasi 0.14.3+wasi-0.2.4",
  "wasm-bindgen",
 ]
 
@@ -1610,9 +1610,9 @@ dependencies = [
 
 [[package]]
 name = "image-webp"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6970fe7a5300b4b42e62c52efa0187540a5bef546c60edaf554ef595d2e6f0b"
+checksum = "525e9ff3e1a4be2fbea1fdf0e98686a6d98b4d8f937e1bf7402245af1909e8c3"
 dependencies = [
  "byteorder-lite",
  "quick-error",
@@ -2697,9 +2697,9 @@ dependencies = [
 
 [[package]]
 name = "potential_utf"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5a7c30837279ca13e7c867e9e40053bc68740f988cb07f7ca6df43cc734b585"
+checksum = "84df19adbe5b5a0782edcab45899906947ab039ccf4573713735ee7de1e6b08a"
 dependencies = [
  "zerovec",
 ]
@@ -3327,7 +3327,7 @@ dependencies = [
 [[package]]
 name = "shader-slang"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-rs#75ac34925fe69ad685d796f47237f77730a831cb"
+source = "git+https://github.com/FloatyMonkey/slang-rs#9e2667803977648990deba4082aa5f0c7ebb4286"
 dependencies = [
  "shader-slang-sys",
 ]
@@ -3335,7 +3335,7 @@ dependencies = [
 [[package]]
 name = "shader-slang-sys"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-rs#75ac34925fe69ad685d796f47237f77730a831cb"
+source = "git+https://github.com/FloatyMonkey/slang-rs#9e2667803977648990deba4082aa5f0c7ebb4286"
 dependencies = [
  "bindgen",
  "serde",
@@ -3377,7 +3377,7 @@ checksum = "7a2ae44ef20feb57a68b23d846850f861394c2e02dc425a50098ae8c90267589"
 [[package]]
 name = "slang-playground-compiler"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#da3fd6d514248ddf692c46375d9b0209d7d88d27"
+source = "git+https://github.com/Devon7925/slang-native-playground#ff42de32e51b0d73fcd1e4c5d658f6e2af56efbc"
 dependencies = [
  "bytemuck",
  "dyn-clone",
@@ -3388,7 +3388,6 @@ dependencies = [
  "reqwest",
  "serde",
  "slang-reflector",
- "strum",
  "tobj",
  "typetag",
  "url",
@@ -3400,7 +3399,7 @@ dependencies = [
 [[package]]
 name = "slang-reflector"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-reflector.git#a772aa73164c1066df09297cb3b62431f502e4f1"
+source = "git+https://github.com/Devon7925/slang-reflector.git#2ea3da53ef2adc20419ad7a6ddde753c5e23be2a"
 dependencies = [
  "serde",
  "shader-slang",
@@ -3409,7 +3408,7 @@ dependencies = [
 [[package]]
 name = "slang-renderer"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#da3fd6d514248ddf692c46375d9b0209d7d88d27"
+source = "git+https://github.com/Devon7925/slang-native-playground#ff42de32e51b0d73fcd1e4c5d658f6e2af56efbc"
 dependencies = [
  "bytemuck",
  "console_error_panic_hook",
@@ -3429,7 +3428,7 @@ dependencies = [
 [[package]]
 name = "slang-shader-macros"
 version = "0.1.0"
-source = "git+https://github.com/Devon7925/slang-native-playground#da3fd6d514248ddf692c46375d9b0209d7d88d27"
+source = "git+https://github.com/Devon7925/slang-native-playground#ff42de32e51b0d73fcd1e4c5d658f6e2af56efbc"
 dependencies = [
  "base64",
  "heck",
@@ -4102,11 +4101,11 @@ checksum = "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
 
 [[package]]
 name = "wasi"
-version = "0.14.2+wasi-0.2.4"
+version = "0.14.3+wasi-0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9683f9a5a998d873c0d21fcbe3c083009670149a8fab228644b8bd36b2c48cb3"
+checksum = "6a51ae83037bdd272a9e28ce236db8c07016dd0d50c27038b3f407533c030c95"
 dependencies = [
- "wit-bindgen-rt",
+ "wit-bindgen",
 ]
 
 [[package]]
@@ -4930,13 +4929,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "wit-bindgen-rt"
-version = "0.39.0"
+name = "wit-bindgen"
+version = "0.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f42320e61fe2cfd34354ecb597f86f413484a798ba44a8ca1165c58d42da6c1"
-dependencies = [
- "bitflags 2.9.3",
-]
+checksum = "052283831dbae3d879dc7f51f3d92703a316ca49f91540417d38591826127814"
 
 [[package]]
 name = "writeable"

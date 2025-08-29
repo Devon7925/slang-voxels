@@ -2,6 +2,31 @@ import playground;
 import common;
 import binding;
 
+[playground::CALL(1, 1, 1)]
+[shader("compute")]
+[numthreads(1, 1, 1)]
+void voxelUpdateSetup(uint2 dispatchThreadId: SV_DispatchThreadID)
+{
+    gameData[0].voxelOffset = (gameData[0].voxelOffset + 1) % 8;
+
+    let currentUpdateCount = gameData[0].currentChunkUpdates[gameData[0].voxelOffset].exchange(0);
+
+    indirectBuffer[0] = CHUNK_SIZE / VOXEL_UPDATE_SIZE / 2 * currentUpdateCount;
+    indirectBuffer[12] = currentUpdateCount;
+}
+
+[numthreads(1, 1, 1)]
+[playground::CALL_INDIRECT("indirectBuffer", 48)]
+void voxelChunkUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
+{
+    uint idx = dispatchThreadId.x;
+    let chunk = chunkUpdates[idx + MAX_CHUNK_UPDATES * gameData[0].voxelOffset];
+
+    let chunk_ptr = floorMod(chunk, RENDER_SIZE);
+    let chunk_idx = get_update_index_of_chunk_ptr(gameData[0].voxelOffset, chunk_ptr);
+    gameData[0].chunkUpdateRequestCounts[chunk_idx].decrement();
+}
+
 [numthreads(VOXEL_UPDATE_SIZE, VOXEL_UPDATE_SIZE, VOXEL_UPDATE_SIZE)]
 [playground::CALL_INDIRECT("indirectBuffer", 0)]
 void voxelUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
@@ -10,9 +35,6 @@ void voxelUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
     let chunk = chunkUpdates[idx + MAX_CHUNK_UPDATES * gameData[0].voxelOffset];
     let pos_in_chunk = (dispatchThreadId * 2) % CHUNK_SIZE;
 
-    let chunk_ptr = floorMod(chunk, RENDER_SIZE);
-    let chunk_idx = gameData[0].voxelOffset * RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z + chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
-    gameData[0].chunkUpdateCounts[chunk_idx].store(0);
     if (!chunk_in_bounds(chunk))
     {
         return;
