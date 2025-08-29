@@ -185,6 +185,17 @@ void worldgen_cleanup(uint3 dispatchThreadId: SV_DispatchThreadID)
         chunks.Store(chunk_ptr, UNLOADED_AIR_CHUNK);
         let availableChunkIdx = gameData[0].chunksAvailable.increment();
         availableChunks[availableChunkIdx] = allocated_chunk_idx;
+        // queue updates for all surrounding chunks
+        for (int z = -1; z <= 1; z++) {
+            for (int y = -1; y <= 1; y++) {
+                for (int x = -1; x <= 1; x++) {
+                    let neighbor = chunk_location + int3(x, y, z);
+                    if (x == 0 && y == 0 && z == 0)
+                        continue;
+                    queue_update_all(neighbor);
+                }
+            }
+        }
     }
     else
     {
