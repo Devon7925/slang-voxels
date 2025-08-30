@@ -19,8 +19,8 @@ void voxelUpdateSetup(uint2 dispatchThreadId: SV_DispatchThreadID)
 [playground::CALL_INDIRECT("indirectBuffer", 48)]
 void voxelChunkUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
 {
-    uint idx = dispatchThreadId.x;
-    let chunk = chunkUpdates[idx + MAX_CHUNK_UPDATES * gameData[0].voxelOffset];
+    updateRequests[0].active_chunk_update_requests[dispatchThreadId.x] = updateRequests[0].chunk_update_requests[gameData[0].voxelOffset][dispatchThreadId.x];
+    let chunk = updateRequests[0].active_chunk_update_requests[dispatchThreadId.x];
 
     let chunk_ptr = floorMod(chunk, RENDER_SIZE);
     let chunk_idx = get_update_index_of_chunk_ptr(gameData[0].voxelOffset, chunk_ptr);
@@ -32,7 +32,7 @@ void voxelChunkUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
 void voxelUpdate(uint3 dispatchThreadId: SV_DispatchThreadID)
 {
     uint idx = dispatchThreadId.x * 2 / CHUNK_SIZE;
-    let chunk = chunkUpdates[idx + MAX_CHUNK_UPDATES * gameData[0].voxelOffset];
+    let chunk = updateRequests[0].active_chunk_update_requests[idx];
     let pos_in_chunk = (dispatchThreadId * 2) % CHUNK_SIZE;
 
     if (!chunk_in_bounds(chunk))

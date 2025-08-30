@@ -8,13 +8,13 @@ float4 mousePosition;
 [playground::FRAME_ID]
 uniform float frame_id;
 
-static const int RENDER_SIZE_X = 16;
-static const int RENDER_SIZE_Y = 8;
-static const int RENDER_SIZE_Z = 16;
-static const int MAX_CHUNKS = 1024;
+static const int RENDER_SIZE_X = 32;
+static const int RENDER_SIZE_Y = 16;
+static const int RENDER_SIZE_Z = 32;
+static const int MAX_CHUNKS = 2048;
 
-static const int MAX_CHUNK_LOADS = 128;
-static const int MAX_CHUNK_UPDATES = 256;
+static const int MAX_CHUNK_LOADS = 256;
+static const int MAX_CHUNK_UPDATES = 512;
 
 static const int RESERVED_CHUNKS = 2;
 static const int MAX_DIMENSION = 2048;
@@ -63,10 +63,15 @@ struct ChunkLoadRequest
     }
 }
 
-[playground::ZEROS(MAX_CHUNK_LOADS)]
-RWStructuredBuffer<ChunkLoadRequest> chunkLoads;
-[playground::ZEROS(8 * MAX_CHUNK_UPDATES)]
-RWStructuredBuffer<int3> chunkUpdates;
+struct UpdateRequests {
+    ChunkLoadRequest[MAX_CHUNK_LOADS] chunk_load_requests;
+    ChunkLoadRequest[MAX_CHUNK_LOADS] active_chunk_load_requests;
+    Array<int3[MAX_CHUNK_UPDATES], 8> chunk_update_requests;
+    int3[MAX_CHUNK_UPDATES] active_chunk_update_requests;
+}
+
+[playground::ZEROS(1)]
+RWStructuredBuffer<UpdateRequests> updateRequests;
 
 struct PlayerInput
 {
@@ -141,7 +146,7 @@ void clearInitialUpdates(uint3 dispatchThreadId: SV_DispatchThreadID)
         return;
     for (var i = 0; i < 8; i++)
     {
-        chunkUpdates[dispatchThreadId.x + i * MAX_CHUNK_UPDATES] = int3(0, 0, 0);
+        updateRequests[0].chunk_update_requests[i][dispatchThreadId.x] = int3(0, 0, 0);
     }
 }
 
@@ -251,7 +256,7 @@ void load_chunk(int3 chunk_pos, bool is_forced)
         return;
     }
     let chunk = availableChunks[availableChunkIdx];
-    chunkLoads[chunkLoadIdx] = ChunkLoadRequest(chunk_pos, chunk, is_forced);
+    updateRequests[0].chunk_load_requests[chunkLoadIdx] = ChunkLoadRequest(chunk_pos, chunk, is_forced);
 }
 
 void queue_update_all(int3 chunk_pos)
@@ -285,7 +290,7 @@ void queue_update_all(int3 chunk_pos)
             gameData[0].currentChunkUpdates[chunk_update_type].decrement();
             continue;
         }
-        chunkUpdates[typed_update_idx + chunk_update_type * MAX_CHUNK_UPDATES] = chunk_pos;
+        updateRequests[0].chunk_update_requests[chunk_update_type][typed_update_idx] = chunk_pos;
     }
 }
 

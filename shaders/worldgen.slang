@@ -126,7 +126,8 @@ void worldgen_update_setup(uint2 dispatchThreadId: SV_DispatchThreadID)
 [playground::CALL_INDIRECT("indirectBuffer", 32)]
 void worldgen_setup(uint3 dispatchThreadId: SV_DispatchThreadID)
 {
-    let chunk_location = chunkLoads[dispatchThreadId.x].get_chunk_pos();
+    updateRequests[0].active_chunk_load_requests[dispatchThreadId.x] = updateRequests[0].chunk_load_requests[dispatchThreadId.x];
+    let chunk_location = updateRequests[0].active_chunk_load_requests[dispatchThreadId.x].get_chunk_pos();
 
     let chunk_ptr = floorMod(chunk_location, RENDER_SIZE);
     let chunk_idx = chunk_ptr.x + chunk_ptr.y * RENDER_SIZE_X + chunk_ptr.z * RENDER_SIZE_X * RENDER_SIZE_Y;
@@ -140,14 +141,14 @@ void worldgen(uint3 dispatchThreadId: SV_DispatchThreadID)
     int3 pos = dispatchThreadId;
     pos.x = pos.x % CHUNK_SIZE;
     let idx = dispatchThreadId.x / CHUNK_SIZE;
-    let chunk_location = chunkLoads[idx].get_chunk_pos();
+    let chunk_location = updateRequests[0].active_chunk_load_requests[idx].get_chunk_pos();
     if (!chunk_in_bounds(chunk_location))
     {
         return;
     }
     pos += CHUNK_SIZE * chunk_location;
 
-    let chunk_idx = chunkLoads[idx].get_chunk_ptr();
+    let chunk_idx = updateRequests[0].active_chunk_load_requests[idx].get_chunk_ptr();
     let chunk_loc = int3(chunk_idx % MAX_CHUNKS_X, (chunk_idx / MAX_CHUNKS_X) % MAX_CHUNKS_Y, chunk_idx / MAX_CHUNKS_X / MAX_CHUNKS_Y);
     uint data = get_worldgen(pos);
     voxels.Store(CHUNK_SIZE * chunk_loc + floorMod(pos, CHUNK_SIZE), data);
@@ -164,7 +165,7 @@ void worldgen(uint3 dispatchThreadId: SV_DispatchThreadID)
 [playground::CALL_INDIRECT("indirectBuffer", 32)]
 void worldgen_cleanup(uint3 dispatchThreadId: SV_DispatchThreadID)
 {
-    let chunk_location = chunkLoads[dispatchThreadId.x].get_chunk_pos();
+    let chunk_location = updateRequests[0].active_chunk_load_requests[dispatchThreadId.x].get_chunk_pos();
 
     if (!chunk_in_bounds(chunk_location))
     {
@@ -177,11 +178,11 @@ void worldgen_cleanup(uint3 dispatchThreadId: SV_DispatchThreadID)
     // allocation and mark the chunk as an unloaded-air chunk so the
     // system can reuse its voxel memory.
     let airCount = gameData[0].chunkLoadRequestCounts[chunk_idx].exchange(0);
-    if (airCount == CHUNK_VOLUME && !chunkLoads[dispatchThreadId.x].get_is_forced())
+    if (airCount == CHUNK_VOLUME && !updateRequests[0].active_chunk_load_requests[dispatchThreadId.x].get_is_forced())
     {
         // Return the allocation to the available list and mark the chunk
         // pointer as UNLOADED_AIR_CHUNK.
-        let allocated_chunk_idx = chunkLoads[dispatchThreadId.x].get_chunk_ptr();
+        let allocated_chunk_idx = updateRequests[0].active_chunk_load_requests[dispatchThreadId.x].get_chunk_ptr();
         chunks.Store(chunk_ptr, UNLOADED_AIR_CHUNK);
         let availableChunkIdx = gameData[0].chunksAvailable.increment();
         availableChunks[availableChunkIdx] = allocated_chunk_idx;
@@ -199,7 +200,7 @@ void worldgen_cleanup(uint3 dispatchThreadId: SV_DispatchThreadID)
     }
     else
     {
-        chunks.Store(chunk_ptr, chunkLoads[dispatchThreadId.x].get_chunk_ptr());
+        chunks.Store(chunk_ptr, updateRequests[0].active_chunk_load_requests[dispatchThreadId.x].get_chunk_ptr());
         // Queue updates for this chunk
         queue_update_all(chunk_location);
     }
