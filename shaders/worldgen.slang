@@ -120,6 +120,22 @@ void worldgen_update_setup(uint2 dispatchThreadId: SV_DispatchThreadID)
 
     indirectBuffer[4] = CHUNK_SIZE / 4 * currentLoadCount;
     indirectBuffer[8] = currentLoadCount;
+
+    let chunksToFlush = availableChunkData[0].chunksToMakeAvailableCount.exchange(0);
+    indirectBuffer[16] = chunksToFlush;
+    indirectBuffer[17] = 1;
+    indirectBuffer[18] = 1;
+}
+
+[shader("compute")]
+[numthreads(1, 1, 1)]
+[playground::CALL_INDIRECT("indirectBuffer", 64)]
+void flushAvailableChunks(uint3 dispatchThreadId: SV_DispatchThreadID)
+{
+    let i = dispatchThreadId.x;
+    let chunk_idx_to_make_available = availableChunkData[0].available_chunks_queue[i];
+    let available_chunk_idx = availableChunkData[0].chunksAvailableCount.increment();
+    availableChunkData[0].available_chunks[available_chunk_idx] = chunk_idx_to_make_available;
 }
 
 [numthreads(1, 1, 1)]
@@ -184,8 +200,7 @@ void worldgen_cleanup(uint3 dispatchThreadId: SV_DispatchThreadID)
         // pointer as UNLOADED_AIR_CHUNK.
         let allocated_chunk_idx = updateRequests[0].active_chunk_load_requests[dispatchThreadId.x].get_chunk_ptr();
         chunks.Store(chunk_ptr, UNLOADED_AIR_CHUNK);
-        let availableChunkIdx = gameData[0].chunksAvailable.increment();
-        availableChunks[availableChunkIdx] = allocated_chunk_idx;
+        free_chunk(allocated_chunk_idx);
         // queue updates for all surrounding chunks
         for (int z = -1; z <= 1; z++) {
             for (int y = -1; y <= 1; y++) {

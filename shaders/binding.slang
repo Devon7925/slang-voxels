@@ -33,8 +33,15 @@ RWTexture3D<uint> chunks;
 [playground::BLACK_3D(CHUNK_SIZE * MAX_CHUNKS_X, CHUNK_SIZE *MAX_CHUNKS_Y, CHUNK_SIZE *MAX_CHUNKS_Z)]
 RWTexture3D<uint> voxels;
 
-[playground::ZEROS(MAX_CHUNKS - RESERVED_CHUNKS)]
-RWStructuredBuffer<int> availableChunks;
+struct AvailableChunkData {
+    Atomic<int> chunksAvailableCount;
+    Atomic<int> chunksToMakeAvailableCount;
+    int[MAX_CHUNKS - RESERVED_CHUNKS] available_chunks;
+    int[MAX_CHUNKS - RESERVED_CHUNKS] available_chunks_queue;
+}
+
+[playground::ZEROS(1)]
+RWStructuredBuffer<AvailableChunkData> availableChunkData;
 
 struct ChunkLoadRequest
 {
@@ -107,7 +114,6 @@ struct GameData
     float4 prevMouse;
     int voxelOffset;
     int3 startPos;
-    Atomic<int> chunksAvailable;
     Atomic<int> currentChunkLoads;
     Atomic<int>[8] currentChunkUpdates;
 }
@@ -118,7 +124,7 @@ RWStructuredBuffer<GameData> gameData;
 [playground::ZEROS(1)]
 RWStructuredBuffer<Player> players;
 
-[playground::ZEROS(16)]
+[playground::ZEROS(20)]
 RWStructuredBuffer<uint> indirectBuffer;
 
 [playground::CALL(RENDER_SIZE_X * RENDER_SIZE_Y * RENDER_SIZE_Z, 1, 1)]
@@ -158,7 +164,7 @@ void init_available(uint3 dispatchThreadId: SV_DispatchThreadID)
 {
     if (dispatchThreadId.x >= MAX_CHUNKS - RESERVED_CHUNKS)
         return;
-    availableChunks[dispatchThreadId.x] = dispatchThreadId.x + RESERVED_CHUNKS;
+    availableChunkData[0].available_chunks[dispatchThreadId.x] = dispatchThreadId.x + RESERVED_CHUNKS;
 }
 
 int3 get_chunk_pos_of_global_pos(int3 global_pos)
@@ -214,8 +220,7 @@ void unload_chunk(int3 chunk_pos)
     }
     if (voxel_data_idx < RESERVED_CHUNKS)
         return;
-    let availableChunkIdx = gameData[0].chunksAvailable.increment();
-    availableChunks[availableChunkIdx] = voxel_data_idx;
+    free_chunk(voxel_data_idx);
 }
 
 bool chunk_in_bounds(int3 chunk_pos)
@@ -240,23 +245,28 @@ void load_chunk(int3 chunk_pos, bool is_forced)
         gameData[0].chunkLoadRequestCounts[chunk_idx].decrement();
         return;
     }
+    let availableChunkIdx = availableChunkData[0].chunksAvailableCount.decrement() - 1;
+    if (availableChunkIdx < 0)
+    {
+        gameData[0].chunkLoadRequestCounts[chunk_idx].decrement();
+        availableChunkData[0].chunksAvailableCount.increment();
+        return;
+    }
+    let chunk = availableChunkData[0].available_chunks[availableChunkIdx];
     let chunkLoadIdx = gameData[0].currentChunkLoads.increment();
     if (chunkLoadIdx >= MAX_CHUNK_LOADS)
     {
         gameData[0].chunkLoadRequestCounts[chunk_idx].decrement();
         gameData[0].currentChunkLoads.decrement();
+        free_chunk(chunk);
         return;
     }
-    let availableChunkIdx = gameData[0].chunksAvailable.decrement() - 1;
-    if (availableChunkIdx < 0)
-    {
-        gameData[0].chunkLoadRequestCounts[chunk_idx].decrement();
-        gameData[0].currentChunkLoads.decrement();
-        gameData[0].chunksAvailable.increment();
-        return;
-    }
-    let chunk = availableChunks[availableChunkIdx];
     updateRequests[0].chunk_load_requests[chunkLoadIdx] = ChunkLoadRequest(chunk_pos, chunk, is_forced);
+}
+
+void free_chunk(int chunk) {
+    let idx = availableChunkData[0].chunksToMakeAvailableCount.increment();
+    availableChunkData[0].available_chunks_queue[idx] = chunk;
 }
 
 void queue_update_all(int3 chunk_pos)
@@ -321,7 +331,8 @@ void setup(uint3 dispatchThreadId: SV_DispatchThreadID)
     indirectBuffer[14] = 1;
 
     gameData[0].startPos = int3(0);
-    gameData[0].chunksAvailable.store(MAX_CHUNKS - RESERVED_CHUNKS);
+    availableChunkData[0].chunksAvailableCount.store(MAX_CHUNKS - RESERVED_CHUNKS);
+    availableChunkData[0].chunksToMakeAvailableCount.store(0);
     gameData[0].currentChunkLoads.store(0);
     for (var i = 0; i < 8; i++)
     {
