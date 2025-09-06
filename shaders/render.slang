@@ -254,14 +254,7 @@ RaycastResult raycast(float3 pos, float3 ray, uint max_iterations)
                     break;
             }
         }
-        if (voxel_material == MAT_AIR)
-        {
-            uint dist = get_dist(voxel_data, offset);
-            v_min = floor_pos - float3(dist);
-            v_max = floor_pos + float3(dist + 1);
-            medium = MAT_AIR;
-        }
-        else if (voxel_material == MAT_AIR_OOB)
+        if (voxel_material == MAT_AIR_OOB)
         {
             v_min = floor(ray_pos / CHUNK_SIZE) * CHUNK_SIZE;
             v_max = v_min + float3(CHUNK_SIZE);
@@ -270,13 +263,13 @@ RaycastResult raycast(float3 pos, float3 ray, uint max_iterations)
         else if (is_transparent[voxel_material])
         {
             uint dist = 0;
-            if (voxel_material == MAT_WATER)
+            if (physics_properties[voxel_material].is_data_standard_distance)
             {
                 dist = get_dist(voxel_data, offset);
             }
-            v_min = floor_pos;
-            v_max = floor_pos + float3(1);
-            if (medium != voxel_material)
+            v_min = floor_pos - float3(dist);
+            v_max = floor_pos + float3(dist + 1);
+            if (medium != voxel_material && voxel_material != MAT_AIR)
             {
                 layers[layer_idx] = RaycastResultLayer(ray_pos, normal, voxel_data, depth, false);
                 layer_idx++;
